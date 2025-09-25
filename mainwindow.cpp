@@ -108,10 +108,6 @@ MainWindow::MainWindow(QWidget *parent)
 
   connect( ui->PushButton_AcquisitionConnect, SIGNAL(clicked()), this, SLOT(onAcquisitionDeviceConnectClicked()));
   connect( ui->PushButton_AcquisitionDisconnect, SIGNAL(clicked()), this, SLOT(onAcquisitionDeviceDisconnectClicked()));
-  connect( ui->PushButton_EnableTimer, SIGNAL(clicked()), this, SLOT(onEnableTimerClicked()));
-  connect( ui->PushButton_DisableTimer, SIGNAL(clicked()), this, SLOT(onDisableTimerClicked()));
-  connect( ui->PushButton_EnableExtStart, SIGNAL(clicked()), this, SLOT(onEnableExtStartClicked()));
-  connect( ui->PushButton_DisableExtStart, SIGNAL(clicked()), this, SLOT(onDisableExtStartClicked()));
   connect( ui->PushButton_ExternalStart, SIGNAL(clicked()), this, SLOT(onExternalStartClicked()));
 //  connect( ui->pushButton_LowK1, SIGNAL(clicked()), this, SLOT(onLowK1Clicked()));
 //  connect( ui->pushButton_HighK1, SIGNAL(clicked()), this, SLOT(onHighK1Clicked()));
@@ -123,23 +119,14 @@ MainWindow::MainWindow(QWidget *parent)
 //  connect( ui->CheckBox_ExternalStart, SIGNAL(clicked(bool)), this, SLOT(onExternalStartChecked(bool)));
 //  connect( ui->CheckBox_InternalTimer, SIGNAL(clicked(bool)), this, SLOT(onInternalTimerChecked(bool)));
 
-  connect( ui->PushButton_PE0, SIGNAL(clicked()), this, SLOT(onPE0Clicked()));
-  connect( ui->PushButton_PE1, SIGNAL(clicked()), this, SLOT(onPE1Clicked()));
-  connect( ui->PushButton_PB1, SIGNAL(clicked()), this, SLOT(onPB1Clicked()));
-
   connect( ui->PushButton_SetExternalStart, SIGNAL(clicked()), this, SLOT(onSetExternalStartClicked()));
-  connect( ui->PushButton_SetInternalTimer, SIGNAL(clicked()), this, SLOT(onSetInternalTimerClicked()));
-
-  connect( ui->PushButton_e, SIGNAL(clicked()), this, SLOT(oneClicked()));
 
   connect( ui->PushButton_Type1, SIGNAL(clicked()), this, SLOT(onType1Clicked()));
   connect( ui->PushButton_Type2, SIGNAL(clicked()), this, SLOT(onType2Clicked()));
   connect( ui->PushButton_Type3, SIGNAL(clicked()), this, SLOT(onType3Clicked()));
   connect( ui->PushButton_Type4, SIGNAL(clicked()), this, SLOT(onType4Clicked()));
+  connect( ui->PushButton_SoftReset, SIGNAL(clicked()), this, SLOT(onSoftResetCLicked()));
   connect( ui->PushButton_PT, SIGNAL(clicked()), this, SLOT(onTemperaturePressureClicked()));
-  connect( ui->PushButton_I2CStuckReset, SIGNAL(clicked()), this, SLOT(onStuckResetClicked()));
-  connect( ui->PushButton_XrayExpoTimer, SIGNAL(clicked()), this, SLOT(onXrayTimerClicked()));
-  connect( ui->PushButton_AcquisitionXray, SIGNAL(clicked()), this, SLOT(onXrayAcquisitionClicked()));
 
   connect( ui->PushButton_OpenFile, SIGNAL(clicked()), this, SLOT(onOpenRootFileClicked()));
   connect( ui->ListWidget_Spills, SIGNAL(currentItemChanged(QListWidgetItem*,QListWidgetItem*)), this, SLOT(onCurrentSpillItemChanged(QListWidgetItem*,QListWidgetItem*)));
@@ -157,12 +144,6 @@ MainWindow::MainWindow(QWidget *parent)
   ui->pushButton_LowK2->hide();
   ui->pushButton_HighK1->hide();
   ui->pushButton_HighK2->hide();
-  ui->PushButton_DisableTimer->hide();
-  ui->PushButton_EnableTimer->hide();
-  ui->PushButton_EnableExtStart->hide();
-  ui->PushButton_DisableExtStart->hide();
-  ui->PushButton_e->hide();
-  ui->PushButton_I2CStuckReset->hide();
 #endif
 
   connect( initiationTimer, SIGNAL(timeout()), this, SLOT(onFirstConnectResponce())); // first responce timeout
@@ -271,15 +252,10 @@ void MainWindow::onAcquisitionDeviceConnectClicked()
   }
   ui->PushButton_AcquisitionConnect->setEnabled(!enabled);
   ui->PushButton_AcquisitionDisconnect->setEnabled(enabled);
-  ui->PushButton_EnableTimer->setEnabled(enabled);
-  ui->PushButton_DisableTimer->setEnabled(enabled);
-  ui->PushButton_EnableExtStart->setEnabled(enabled);
-  ui->PushButton_DisableExtStart->setEnabled(enabled);
   ui->PushButton_ExternalStart->setEnabled(enabled);
   ui->PushButton_Acquisition->setEnabled(enabled);
   ui->PushButton_ExternalCounter->setEnabled(enabled);
   ui->PushButton_SetExternalStart->setEnabled(enabled);
-  ui->PushButton_SetInternalTimer->setEnabled(enabled);
 
   ui->PushButton_Test->setEnabled(enabled);
   ui->RadioButton_HighK1->setEnabled(enabled);
@@ -315,16 +291,11 @@ void MainWindow::onAcquisitionDeviceDisconnectClicked()
   this->lastCommandData.clear();
   ui->PushButton_AcquisitionConnect->setEnabled(!enabled);
   ui->PushButton_AcquisitionDisconnect->setEnabled(enabled);
-  ui->PushButton_EnableTimer->setEnabled(enabled);
-  ui->PushButton_DisableTimer->setEnabled(enabled);
-  ui->PushButton_EnableExtStart->setEnabled(enabled);
-  ui->PushButton_DisableExtStart->setEnabled(enabled);
   ui->PushButton_ExternalStart->setEnabled(enabled);
   ui->PushButton_Test->setEnabled(enabled);
   ui->PushButton_Acquisition->setEnabled(enabled);
   ui->PushButton_ExternalCounter->setEnabled(enabled);
   ui->PushButton_SetExternalStart->setEnabled(enabled);
-  ui->PushButton_SetInternalTimer->setEnabled(enabled);
 
   ui->RadioButton_HighK1->setEnabled(enabled);
   ui->RadioButton_HighK2->setEnabled(enabled);
@@ -364,16 +335,13 @@ void MainWindow::acquisitionSerialPortDataReady()
     constexpr int ADC_HIGH_BITS = 6;
     constexpr int ADC_LOW_BITS = CHAR_BIT;
     constexpr int ADC_BITS = ADC_LOW_BITS + ADC_HIGH_BITS;
-///    std::ofstream file("adcData.txt");
     for (int i = dataBegin; i < dataEnd; i += 2)
     {
       std::bitset< ADC_HIGH_BITS > high(data[i + 1] & 0x3F);
       std::bitset< ADC_LOW_BITS > low(data[i]);
       std::bitset< ADC_BITS > count((high.to_ulong() << ADC_LOW_BITS) | low.to_ulong());
       adcData.push_back(static_cast< int >(count.to_ulong()));
-///      file << high.to_string() << ' ' << low.to_string() << ' ' << count.to_string() << '\n';
     }
-///    file.close();
     qDebug() << Q_FUNC_INFO << "Slow extraction ends, data size: " << adcData.size() << " Time for ADC count: "
              << adcData.size() / spillDuration.count() << " ms^-1";
     this->adcGraph->Set(static_cast< Int_t >(adcData.size()));
@@ -418,7 +386,6 @@ void MainWindow::acquisitionSerialPortDataReady()
 
     this->externalCounter = count;
     this->updateTemperaturePressureCounter();
-
 //    this->acquisitionPortData.clear();
     return;
   }
@@ -500,28 +467,6 @@ void MainWindow::acquisitionSerialPortDataReady()
     this->acquisitionPortData.clear();
     return;
   }
-  else if (this->acquisitionPortData.size() == 3 && !this->acquisitionPortData.startsWith('5') &&
-           !this->acquisitionPortData.startsWith('6') && !this->acquisitionPortData.startsWith('7') &&
-           (this->acquisitionPortData.endsWith("OK") || this->acquisitionPortData.endsWith("NO")))
-  {
-    qDebug() << Q_FUNC_INFO << this->acquisitionPortData;
-    if (this->acquisitionPortData.endsWith("OK"))
-    {
-      ui->statusbar->showMessage(QObject::tr("Correct response: %1").arg(char(this->acquisitionPortData[0])), 3000);
-    }
-    else if (this->acquisitionPortData.endsWith("NO"))
-    {
-      ui->statusbar->showMessage(QObject::tr("Wrong response: %1").arg(char(this->acquisitionPortData[0])), 3000);
-    }
-    if (this->initiationProgress->isVisible())
-    {
-      this->initiationProgress->hide();
-      this->initiationProgress->close();
-    }
-    this->initiationTimer->stop();
-    this->acquisitionPortData.clear();
-    return;
-  }
   else if (this->acquisitionPortData.size() == 5 && this->acquisitionPortData.startsWith('q') &&
       (this->acquisitionPortData.endsWith("OK") || this->acquisitionPortData.endsWith("NO")))
   {
@@ -589,26 +534,6 @@ void MainWindow::acquisitionSerialPortDataReady()
     this->updateTemperaturePressureCounter();
     this->saveAcquisitionData(this->adcGraph, this->xrayExpoTimer, temperature, pressure, this->externalCounter);
     this->acquisitionPortData.clear();
-    QTimer::singleShot(10, this, SLOT(onPB1Clicked()));
-    return;
-  }
-  else if (this->acquisitionPortData == "5OK")
-  {
-    qDebug() << Q_FUNC_INFO << "Ready: " << this->acquisitionPortData;
-    this->acquisitionPortData.clear();
-    return;
-  }
-  else if (this->acquisitionPortData == "7OK")
-  {
-    qDebug() << Q_FUNC_INFO << "End: " << this->acquisitionPortData;
-    this->acquisitionPortData.clear();
-    return;
-  }
-  else if (this->acquisitionPortData == "6OK")
-  {
-    qDebug() << Q_FUNC_INFO << "Go: " << this->acquisitionPortData;
-    this->acquisitionPortData.clear();
-    QTimer::singleShot(10, this, SLOT(onExternalStartClicked()));
     return;
   }
 }
@@ -681,53 +606,6 @@ void MainWindow::onExternalCounterClicked()
   }
 }
 
-void MainWindow::onEnableTimerClicked()
-{
-  unsigned char buf[COMMAND_BUFFER_SIZE] = { 'T' };
-  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
-
-  if (this->acquisitionPort && this->acquisitionPort->isOpen())
-  {
-    bool result = this->acquisitionPort->write(this->lastCommandData);
-    if (result)
-    {
-      qDebug() << Q_FUNC_INFO << "Enable timer";
-    }
-  }
-}
-
-void MainWindow::onDisableTimerClicked()
-{
-  unsigned char buf[COMMAND_BUFFER_SIZE] = { 't' };
-  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
-
-  if (this->acquisitionPort && this->acquisitionPort->isOpen())
-  {
-    bool result = this->acquisitionPort->write(this->lastCommandData);
-    if (result)
-    {
-      qDebug() << Q_FUNC_INFO << "Disable timer";
-    }
-  }
-}
-
-void MainWindow::onInternalTimerChecked(bool check)
-{
-  char t = (check) ? 'T' : 't';
-  unsigned char buf[COMMAND_BUFFER_SIZE] = {};
-  buf[0] = t;
-  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
-
-  if (this->acquisitionPort && this->acquisitionPort->isOpen())
-  {
-    bool result = this->acquisitionPort->write(this->lastCommandData);
-    if (result)
-    {
-      qDebug() << Q_FUNC_INFO << "Internal timer: " << t;
-    }
-  }
-}
-
 void MainWindow::onExternalStartChecked(bool check)
 {
   char e = (check) ? 'E' : 'e';
@@ -741,36 +619,6 @@ void MainWindow::onExternalStartChecked(bool check)
     if (result)
     {
       qDebug() << Q_FUNC_INFO << "External start: " << e;
-    }
-  }
-}
-
-void MainWindow::onStuckResetClicked()
-{
-  unsigned char buf[COMMAND_BUFFER_SIZE] = { 'R' };
-  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
-
-  if (this->acquisitionPort && this->acquisitionPort->isOpen())
-  {
-    bool result = this->acquisitionPort->write(this->lastCommandData);
-    if (result)
-    {
-      qDebug() << Q_FUNC_INFO << "I2C stuck reset";
-    }
-  }
-}
-
-void MainWindow::onEnableExtStartClicked()
-{
-  unsigned char buf[COMMAND_BUFFER_SIZE] = { 'E' };
-  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
-
-  if (this->acquisitionPort && this->acquisitionPort->isOpen())
-  {
-    bool result = this->acquisitionPort->write(this->lastCommandData);
-    if (result)
-    {
-      qDebug() << Q_FUNC_INFO << "Enable external start";
     }
   }
 }
@@ -842,23 +690,6 @@ void MainWindow::onRadioGroupK2Changed(QAbstractButton* aButton)
   }
 }
 
-void MainWindow::onSetInternalTimerClicked()
-{
-  char t = (ui->CheckBox_InternalTimer->isChecked()) ? 'T' : 't';
-  unsigned char buf[COMMAND_BUFFER_SIZE] = {};
-  buf[0] = t;
-  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
-
-  if (this->acquisitionPort && this->acquisitionPort->isOpen())
-  {
-    bool result = this->acquisitionPort->write(this->lastCommandData);
-    if (result)
-    {
-      qDebug() << Q_FUNC_INFO << "Internal timer: " << t;
-    }
-  }
-}
-
 void MainWindow::onSetExternalStartClicked()
 {
   char e = (ui->CheckBox_ExternalStart->isChecked()) ? 'E' : 'e';
@@ -925,20 +756,6 @@ void MainWindow::onHighK2Clicked()
   }
 }
 */
-void MainWindow::onDisableExtStartClicked()
-{
-  unsigned char buf[COMMAND_BUFFER_SIZE] = { 'e' };
-  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
-
-  if (this->acquisitionPort && this->acquisitionPort->isOpen())
-  {
-    bool result = this->acquisitionPort->write(this->lastCommandData);
-    if (result)
-    {
-      qDebug() << Q_FUNC_INFO << "Disable external start";
-    }
-  }
-}
 
 void MainWindow::onType1Clicked()
 {
@@ -952,6 +769,21 @@ void MainWindow::onType1Clicked()
     if (result)
     {
       qDebug() << Q_FUNC_INFO << "HP206C I2C Type-1 command:" << com;
+    }
+  }
+}
+
+void MainWindow::onSoftResetClicked()
+{
+  unsigned char buf[COMMAND_BUFFER_SIZE] = { '1', 0x06 };
+  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
+
+  if (this->acquisitionPort && this->acquisitionPort->isOpen())
+  {
+    bool result = this->acquisitionPort->write(this->lastCommandData);
+    if (result)
+    {
+      qDebug() << Q_FUNC_INFO << "HP206C I2C SOFT_RST command";
     }
   }
 }
@@ -1033,66 +865,6 @@ void MainWindow::onFirstConnectResponce()
   }
 }
 
-void MainWindow::onPE0Clicked()
-{
-  char buf[COMMAND_BUFFER_SIZE] = { '5' };
-  this->lastCommandData = QByteArray( buf, COMMAND_BUFFER_SIZE);
-
-  if (this->acquisitionPort && this->acquisitionPort->isOpen())
-  {
-    bool result = this->acquisitionPort->write(this->lastCommandData);
-    if (result)
-    {
-      qDebug() << Q_FUNC_INFO << "E0";
-    }
-  }
-}
-
-void MainWindow::onPE1Clicked()
-{
-  char buf[COMMAND_BUFFER_SIZE] = { '6' };
-  this->lastCommandData = QByteArray( buf, COMMAND_BUFFER_SIZE);
-
-  if (this->acquisitionPort && this->acquisitionPort->isOpen())
-  {
-    bool result = this->acquisitionPort->write(this->lastCommandData);
-    if (result)
-    {
-      qDebug() << Q_FUNC_INFO << "E1";
-    }
-  }
-}
-
-void MainWindow::onPB1Clicked()
-{
-  char buf[COMMAND_BUFFER_SIZE] = { '7' };
-  this->lastCommandData = QByteArray( buf, COMMAND_BUFFER_SIZE);
-
-  if (this->acquisitionPort && this->acquisitionPort->isOpen())
-  {
-    bool result = this->acquisitionPort->write(this->lastCommandData);
-    if (result)
-    {
-      qDebug() << Q_FUNC_INFO << "B1";
-    }
-  }
-}
-
-void MainWindow::oneClicked()
-{
-  char buf[COMMAND_BUFFER_SIZE] = { 'q' };
-  this->lastCommandData = QByteArray( buf, COMMAND_BUFFER_SIZE);
-
-  if (this->acquisitionPort && this->acquisitionPort->isOpen())
-  {
-    bool result = this->acquisitionPort->write(this->lastCommandData);
-    if (result)
-    {
-      qDebug() << Q_FUNC_INFO << "get temperature";
-    }
-  }
-}
-
 void MainWindow::saveSettings()
 {
   QSettings set;
@@ -1131,40 +903,6 @@ void MainWindow::updateTemperaturePressureCounter()
 
   this->ui->Label_TemperaturePressureExtCount->setText(
     QObject::tr("Temperature (deg C): %1. Pressure (mbar): %2. Extenal count: %3").arg(t).arg(p).arg(c));
-}
-
-void MainWindow::onXrayAcquisitionClicked()
-{
-  char buf[COMMAND_BUFFER_SIZE] = { 'R' };
-  this->lastCommandData = QByteArray( buf, COMMAND_BUFFER_SIZE);
-
-  if (this->acquisitionPort && this->acquisitionPort->isOpen())
-  {
-    bool result = this->acquisitionPort->write(this->lastCommandData);
-    if (result)
-    {
-      timeWaitingBegin = std::chrono::steady_clock::now();
-      qDebug() << Q_FUNC_INFO << "X-ray acquisition start";
-      this->xrayExpoTimer = this->ui->SpinBox_XrayExpoTimer->value();
-    }
-  }
-}
-
-void MainWindow::onXrayTimerClicked()
-{
-  int v = this->ui->SpinBox_XrayExpoTimer->value() / 32;
-  char buf[COMMAND_BUFFER_SIZE] = { 'D', char(v) };
-  this->lastCommandData = QByteArray( buf, COMMAND_BUFFER_SIZE);
-
-  if (this->acquisitionPort && this->acquisitionPort->isOpen())
-  {
-    bool result = this->acquisitionPort->write(this->lastCommandData);
-    if (result)
-    {
-      timeWaitingBegin = std::chrono::steady_clock::now();
-      qDebug() << Q_FUNC_INFO << "X-ray acquisition start, counter: " << v;
-    }
-  }
 }
 
 void MainWindow::saveAcquisitionData(TGraph* graph, int xrayCount, double t, double p, int adcCount)
