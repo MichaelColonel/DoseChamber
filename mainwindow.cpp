@@ -36,14 +36,7 @@
 namespace
 {
 
-Double_t linnn(Double_t *x, Double_t* par)
-{
-  return (par[0] + x[0] * par[1]);
-}
-
 constexpr double ADC_COUNT_TIME_MS = 1582.01 / 100000.;
-
-std::map< int, std::pair< int, int > > xrayPedSignalRange;
 
 }
 
@@ -55,24 +48,6 @@ MainWindow::MainWindow(QWidget *parent)
   , initiationProgress(new QProgressDialog(this))
 {
   ui->setupUi(this);
-
-  xrayPedSignalRange[0] = std::make_pair(0, 110);
-  xrayPedSignalRange[160] = std::make_pair(120, 230);
-  xrayPedSignalRange[224] = std::make_pair(110, 167);
-  xrayPedSignalRange[320] = std::make_pair(110, 238);
-  xrayPedSignalRange[384] = std::make_pair(110, 287);
-  xrayPedSignalRange[544] = std::make_pair(110, 410);
-//  xrayPedSignalRange[640] = std::make_pair(110, 480);
-  xrayPedSignalRange[640] = std::make_pair(110, 335);
-  xrayPedSignalRange[800] = std::make_pair(110, 600);
-  xrayPedSignalRange[960] = std::make_pair(110, 720);
-  xrayPedSignalRange[1120] = std::make_pair(110, 840);
-  xrayPedSignalRange[1280] = std::make_pair(110, 960);
-  xrayPedSignalRange[1440] = std::make_pair(110, 1080);
-  xrayPedSignalRange[1600] = std::make_pair(110, 1200);
-  xrayPedSignalRange[1760] = std::make_pair(110, 1320);
-  xrayPedSignalRange[1920] = std::make_pair(110, 1440);
-  xrayPedSignalRange[2080] = std::make_pair(110, 1560);
 
   this->initiationProgress->setWindowTitle(tr("Dose chamber"));
 
@@ -86,38 +61,12 @@ MainWindow::MainWindow(QWidget *parent)
   this->adcGraph->SetTitle("ADC data;Samples;ADC count");
   this->adcGraph->Draw("AL*");
 
-  this->pedCanvas = this->ui->RootCanvas_Ped->getCanvas();
-  this->pedCanvas->cd();
-  this->pedPad = new TPad("pedPad", "Grid", 0., 0., 1., 1.);
-  this->pedPad->Draw();
-  this->pedPad->SetGrid();
-  this->pedPad->cd();
-  this->pedGraph = new TGraph(100000);
-  this->pedGraph->SetTitle("ADC data;Time (ms);ADC count");
-  this->pedGraph->Draw("AL*");
-
-  this->signalCanvas = this->ui->RootCanvas_Signal->getCanvas();
-  this->signalCanvas->cd();
-  this->signalPad = new TPad("signalPad", "Grid", 0., 0., 1., 1.);
-  this->signalPad->Draw();
-  this->signalPad->SetGrid();
-  this->signalPad->cd();
-  this->signalGraph = new TGraph(100000);
-  this->signalGraph->SetTitle("ADC data;Time (ms);ADC count");
-  this->signalGraph->Draw("AL*");
-
   connect( ui->PushButton_AcquisitionConnect, SIGNAL(clicked()), this, SLOT(onAcquisitionDeviceConnectClicked()));
   connect( ui->PushButton_AcquisitionDisconnect, SIGNAL(clicked()), this, SLOT(onAcquisitionDeviceDisconnectClicked()));
   connect( ui->PushButton_ExternalStart, SIGNAL(clicked()), this, SLOT(onExternalStartClicked()));
-//  connect( ui->pushButton_LowK1, SIGNAL(clicked()), this, SLOT(onLowK1Clicked()));
-//  connect( ui->pushButton_HighK1, SIGNAL(clicked()), this, SLOT(onHighK1Clicked()));
-//  connect( ui->pushButton_LowK2, SIGNAL(clicked()), this, SLOT(onLowK2Clicked()));
-//  connect( ui->pushButton_HighK2, SIGNAL(clicked()), this, SLOT(onHighK2Clicked()));
   connect( ui->PushButton_Acquisition, SIGNAL(clicked()), this, SLOT(onAcquisitionClicked()));
   connect( ui->PushButton_ExternalCounter, SIGNAL(clicked()), this, SLOT(onExternalCounterClicked()));
   connect( ui->PushButton_Test, SIGNAL(clicked()), this, SLOT(onTestClicked()));
-//  connect( ui->CheckBox_ExternalStart, SIGNAL(clicked(bool)), this, SLOT(onExternalStartChecked(bool)));
-//  connect( ui->CheckBox_InternalTimer, SIGNAL(clicked(bool)), this, SLOT(onInternalTimerChecked(bool)));
 
   connect( ui->PushButton_SetExternalStart, SIGNAL(clicked()), this, SLOT(onSetExternalStartClicked()));
 
@@ -125,8 +74,9 @@ MainWindow::MainWindow(QWidget *parent)
   connect( ui->PushButton_Type2, SIGNAL(clicked()), this, SLOT(onType2Clicked()));
   connect( ui->PushButton_Type3, SIGNAL(clicked()), this, SLOT(onType3Clicked()));
   connect( ui->PushButton_Type4, SIGNAL(clicked()), this, SLOT(onType4Clicked()));
-  connect( ui->PushButton_SoftReset, SIGNAL(clicked()), this, SLOT(onSoftResetCLicked()));
+  connect( ui->PushButton_SoftReset, SIGNAL(clicked()), this, SLOT(onSoftResetClicked()));
   connect( ui->PushButton_PT, SIGNAL(clicked()), this, SLOT(onTemperaturePressureClicked()));
+  connect( ui->PushButton_SetSamples1k, SIGNAL(clicked()), this, SLOT(onSetSamplesClicked()));
 
   connect( ui->PushButton_OpenFile, SIGNAL(clicked()), this, SLOT(onOpenRootFileClicked()));
   connect( ui->ListWidget_Spills, SIGNAL(currentItemChanged(QListWidgetItem*,QListWidgetItem*)), this, SLOT(onCurrentSpillItemChanged(QListWidgetItem*,QListWidgetItem*)));
@@ -134,17 +84,6 @@ MainWindow::MainWindow(QWidget *parent)
   connect( ui->ButtonGroup_K1, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(onRadioGroupK1Changed(QAbstractButton*)));
   connect( ui->ButtonGroup_K2, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(onRadioGroupK2Changed(QAbstractButton*)));
   connect( timer, SIGNAL(timeout()), this, SLOT(onRootEventsTimeout())); // iterate ROOT events
-
-  // fit
-  connect( ui->PushButton_FitPed, SIGNAL(clicked()), this, SLOT(onFitPedClicked()));
-  connect( ui->PushButton_FitSignal, SIGNAL(clicked()), this, SLOT(onFitSignalClicked()));
-
-#ifndef DEBUG
-  ui->pushButton_LowK1->hide();
-  ui->pushButton_LowK2->hide();
-  ui->pushButton_HighK1->hide();
-  ui->pushButton_HighK2->hide();
-#endif
 
   connect( initiationTimer, SIGNAL(timeout()), this, SLOT(onFirstConnectResponce())); // first responce timeout
   this->initiationTimer->setInterval(1000);
@@ -252,16 +191,7 @@ void MainWindow::onAcquisitionDeviceConnectClicked()
   }
   ui->PushButton_AcquisitionConnect->setEnabled(!enabled);
   ui->PushButton_AcquisitionDisconnect->setEnabled(enabled);
-  ui->PushButton_ExternalStart->setEnabled(enabled);
-  ui->PushButton_Acquisition->setEnabled(enabled);
-  ui->PushButton_ExternalCounter->setEnabled(enabled);
-  ui->PushButton_SetExternalStart->setEnabled(enabled);
-
-  ui->PushButton_Test->setEnabled(enabled);
-  ui->RadioButton_HighK1->setEnabled(enabled);
-  ui->RadioButton_HighK2->setEnabled(enabled);
-  ui->RadioButton_LowK1->setEnabled(enabled);
-  ui->RadioButton_LowK2->setEnabled(enabled);
+  this->enableButtons(true);
 }
 
 void MainWindow::onAcquisitionDeviceDisconnectClicked()
@@ -291,16 +221,7 @@ void MainWindow::onAcquisitionDeviceDisconnectClicked()
   this->lastCommandData.clear();
   ui->PushButton_AcquisitionConnect->setEnabled(!enabled);
   ui->PushButton_AcquisitionDisconnect->setEnabled(enabled);
-  ui->PushButton_ExternalStart->setEnabled(enabled);
-  ui->PushButton_Test->setEnabled(enabled);
-  ui->PushButton_Acquisition->setEnabled(enabled);
-  ui->PushButton_ExternalCounter->setEnabled(enabled);
-  ui->PushButton_SetExternalStart->setEnabled(enabled);
-
-  ui->RadioButton_HighK1->setEnabled(enabled);
-  ui->RadioButton_HighK2->setEnabled(enabled);
-  ui->RadioButton_LowK1->setEnabled(enabled);
-  ui->RadioButton_LowK2->setEnabled(enabled);
+  this->enableButtons(false);
 
   ui->statusbar->showMessage(QObject::tr("Acquisition device disconnected"), 1000);
 }
@@ -316,12 +237,12 @@ void MainWindow::acquisitionSerialPortDataReady()
 
   this->acquisitionPortData.push_back(portData);
   constexpr int dataBegin = std::strlen("Start");
-  if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.size() == dataBegin)
-  {
-    qDebug() << Q_FUNC_INFO << "Slow extraction begins";
-    return;
-  }
-  else if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.endsWith("Finish"))
+//  if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.size() == dataBegin)
+//  {
+//    qDebug() << Q_FUNC_INFO << "Slow extraction begins";
+//    return;
+//  }
+  if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.endsWith("Finish"))
   {
     timeWaitingEnd = std::chrono::steady_clock::now();
     std::chrono::duration< float, std::milli > spillDuration(timeWaitingEnd - timeWaitingBegin);
@@ -375,7 +296,7 @@ void MainWindow::acquisitionSerialPortDataReady()
     std::bitset< CHAR_BIT > tcnt1l(data[1]);
     std::bitset< CHAR_BIT > tcnt1h(data[2]);
     std::bitset< CHAR_BIT > ovf(data[3]);
-    int count = int((tcnt1h.to_ulong() << 8) | tcnt1l.to_ulong()); // TCNT1
+    int count = int((tcnt1h.to_ulong() << CHAR_BIT) | tcnt1l.to_ulong()); // TCNT1
     count += int(ovf.to_ulong() * USHRT_MAX); // overflows
     ui->Label_TemperaturePressureExtCount->setText(tr("External counter: %1").arg(count));
     qDebug() << Q_FUNC_INFO << "T1 counter: " << count;
@@ -457,7 +378,7 @@ void MainWindow::acquisitionSerialPortDataReady()
     {
       pressure = static_cast< double >(adcP.to_ulong()) / 100.;
     }
-    ui->statusbar->showMessage(QObject::tr("Temperature (deg C): %1. Pressure (mbar): %2").arg(temperature).arg(pressure), 1000);
+    ui->statusbar->showMessage(QObject::tr("Temperature: %1 deg C. Pressure: %2 (mbar)").arg(temperature).arg(pressure), 1000);
     qDebug() << Q_FUNC_INFO << "Temperature (deg C):" << temperature << ". Pressure (mbar):" << pressure;
 
     this->sensorTemperature = temperature;
@@ -532,7 +453,18 @@ void MainWindow::acquisitionSerialPortDataReady()
     this->sensorTemperature = temperature;
     this->sensorPressure = pressure;
     this->updateTemperaturePressureCounter();
-    this->saveAcquisitionData(this->adcGraph, this->xrayExpoTimer, temperature, pressure, this->externalCounter);
+    this->saveAcquisitionData(this->adcGraph, this->samples1k, temperature, pressure, this->externalCounter);
+    this->acquisitionPortData.clear();
+    return;
+  }
+  else if (this->acquisitionPortData.size() == 3 && this->acquisitionPortData.startsWith('M') &&
+      (this->acquisitionPortData.endsWith("OK") || this->acquisitionPortData.endsWith("NO")))
+  {
+    qDebug() << Q_FUNC_INFO << "Set samples * 1000 response:" << this->acquisitionPortData;
+    if (this->acquisitionPortData.endsWith("OK"))
+    {
+      this->samples1k = this->ui->SpinBox_Samples1k->value();
+    }
     this->acquisitionPortData.clear();
     return;
   }
@@ -554,7 +486,6 @@ void MainWindow::onExternalStartClicked()
     {
       timeWaitingBegin = std::chrono::steady_clock::now();
       qDebug() << Q_FUNC_INFO << "External start";
-      this->xrayExpoTimer = 0;
     }
   }
 }
@@ -757,6 +688,22 @@ void MainWindow::onHighK2Clicked()
 }
 */
 
+void MainWindow::onSetSamplesClicked()
+{
+  unsigned char com = ui->SpinBox_Samples1k->value();
+  unsigned char buf[COMMAND_BUFFER_SIZE] = { 'M', com };
+  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
+
+  if (this->acquisitionPort && this->acquisitionPort->isOpen())
+  {
+    bool result = this->acquisitionPort->write(this->lastCommandData);
+    if (result)
+    {
+      qDebug() << Q_FUNC_INFO << "Samples * 1000 value:" << com;
+    }
+  }
+}
+
 void MainWindow::onType1Clicked()
 {
   unsigned char com = ui->SpinBox_I2CCommand->value();
@@ -870,6 +817,9 @@ void MainWindow::saveSettings()
   QSettings set;
   QString acquisitionDeviceName = ui->LineEdit_AcquisitionDeviceName->text();
   set.setValue( "device-name", acquisitionDeviceName);
+  int samples = ui->SpinBox_Samples1k->value();
+  set.setValue( "samples-1k", samples);
+
 }
 
 void MainWindow::loadSettings()
@@ -877,6 +827,8 @@ void MainWindow::loadSettings()
   QSettings set;
   QString name = set.value( "device-name", "/dev/cabin26_platform").toString();
   ui->LineEdit_AcquisitionDeviceName->setText(name);
+  int samples = set.value( "samples-1k", 100).toInt();
+  ui->SpinBox_Samples1k->setValue(samples);
 }
 
 void MainWindow::onInitiateDeviceStopClicked()
@@ -905,7 +857,7 @@ void MainWindow::updateTemperaturePressureCounter()
     QObject::tr("Temperature (deg C): %1. Pressure (mbar): %2. Extenal count: %3").arg(t).arg(p).arg(c));
 }
 
-void MainWindow::saveAcquisitionData(TGraph* graph, int xrayCount, double t, double p, int adcCount)
+void MainWindow::saveAcquisitionData(TGraph* graph, int samples, double t, double p, int adcCount)
 {
   if (!this->rootFile)
   {
@@ -918,19 +870,39 @@ void MainWindow::saveAcquisitionData(TGraph* graph, int xrayCount, double t, dou
   QDateTime timeStamp = QDateTime::currentDateTime();
 
   QString timeStampStr = timeStamp.toString("ddMMyyyy_hhmmss");
-  QString titleString = tr("%5_%1_%2_%3_%4").arg(xrayCount).arg(t).arg(p).arg(adcCount).arg(timeStampStr);
+  QString titleString = tr("%5_%1_%2_%3_%4").arg(samples).arg(t).arg(p).arg(adcCount).arg(timeStampStr);
   std::string titleStdString = titleString.toStdString();
 
   std::unique_ptr< TTree > rootTree(new TTree(titleStdString.c_str(), prefixString.c_str()));
 
   rootTree->Branch("graph", graph);
-  rootTree->Branch("xrayExpoTime", &xrayCount, "xrayExpoTime/I");
+  rootTree->Branch("samples1k", &samples, "samples1k/I");
   rootTree->Branch("temperature", &t, "temperature/D");
   rootTree->Branch("pressure", &p, "pressure/D");
   rootTree->Branch("adcCount", &adcCount, "adcCount/I");
 
   rootTree->Fill();
   rootTree->Write();
+}
+
+void MainWindow::enableButtons(bool enable)
+{
+  ui->PushButton_ExternalStart->setEnabled(enable);
+  ui->PushButton_Acquisition->setEnabled(enable);
+  ui->PushButton_ExternalCounter->setEnabled(enable);
+  ui->PushButton_SetExternalStart->setEnabled(enable);
+  ui->PushButton_Test->setEnabled(enable);
+  ui->RadioButton_HighK1->setEnabled(enable);
+  ui->RadioButton_HighK2->setEnabled(enable);
+  ui->RadioButton_LowK1->setEnabled(enable);
+  ui->RadioButton_LowK2->setEnabled(enable);
+  ui->PushButton_Type1->setEnabled(enable);
+  ui->PushButton_Type2->setEnabled(enable);
+  ui->PushButton_Type3->setEnabled(enable);
+  ui->PushButton_Type4->setEnabled(enable);
+  ui->PushButton_SoftReset->setEnabled(enable);
+  ui->PushButton_PT->setEnabled(enable);
+  ui->PushButton_SetSamples1k->setEnabled(enable);
 }
 
 void MainWindow::onOpenRootFileClicked()
@@ -1004,7 +976,7 @@ void MainWindow::onCurrentSpillItemChanged(QListWidgetItem* newItem,QListWidgetI
   QString treeName = newItem->text();
   std::string treeStdName = treeName.toStdString();
   TTree* spillTree = dynamic_cast< TTree* >(f->Get(treeStdName.c_str()));
-  int xrayExpoTime = -1;
+  int samples = -1;
   double pressure = -1.;
   double temperature = -1.;
   int adcCount = -1;
@@ -1013,7 +985,7 @@ void MainWindow::onCurrentSpillItemChanged(QListWidgetItem* newItem,QListWidgetI
     spillTree->SetBranchAddress("adcCount", &adcCount);
     spillTree->SetBranchAddress("temperature", &temperature);
     spillTree->SetBranchAddress("pressure", &pressure);
-    spillTree->SetBranchAddress("xrayExpoTime", &xrayExpoTime);
+    spillTree->SetBranchAddress("samples1k", &samples);
 
     Int_t nentries = static_cast<Int_t>(spillTree->GetEntries());
 
@@ -1023,7 +995,7 @@ void MainWindow::onCurrentSpillItemChanged(QListWidgetItem* newItem,QListWidgetI
       this->ui->Label_AdcCount->setText(tr("ADC count: %1").arg(adcCount));
       this->ui->Label_Temperature->setText(tr("Temperature (C): %1").arg(temperature));
       this->ui->Label_Pressure->setText(tr("Pressure (mBar): %1").arg(pressure));
-      this->ui->Label_ExposureTime->setText(tr("X-ray exposure time (ms): %1, code( %2 )").arg(xrayExpoTime).arg(xrayExpoTime / 32));
+      this->ui->SpinBox_Samples1k->setValue(samples);
     }
     spillTree->SetBranchAddress("graph", &this->adcGraph);
     nentries = static_cast<Int_t>(spillTree->GetEntries());
@@ -1032,116 +1004,5 @@ void MainWindow::onCurrentSpillItemChanged(QListWidgetItem* newItem,QListWidgetI
       spillTree->GetEntry(i);
     }
   }
-  if (xrayExpoTime > 0)
-  {
-    Int_t n = this->adcGraph->GetN();
-    for (Int_t i = 0; i < n; ++i)
-    {
-      Double_t x, y;
-      Int_t z = this->adcGraph->GetPoint(i, x, y);
-      if (z != -1)
-      {
-        this->signalGraph->SetPoint(i, x * ADC_COUNT_TIME_MS, y);
-      }
-    }
-//    this->pedCanvas->cd();
-//    this->pedPad->cd();
-//    this->signalGraph->Draw("same");
-//    this->pedPad->Update();
-//    this->pedPad->Modified();
-    this->signalPad->Update();
-    this->signalPad->Modified();
-    this->fitExpoSignalData(xrayExpoTime);
-  }
-  else
-  {
-    Int_t n = this->adcGraph->GetN();
-    for (Int_t i = 0; i < n; ++i)
-    {
-      Double_t x, y;
-      Int_t z = this->adcGraph->GetPoint(i, x, y);
-      if (z != -1)
-      {
-        this->pedGraph->SetPoint(i, x * ADC_COUNT_TIME_MS, y);
-      }
-    }
-    this->pedPad->Update();
-    this->pedPad->Modified();
-  }
   f->Close();
-}
-
-void MainWindow::onFitPedClicked()
-{
-  int pedBegin = this->ui->SpinBox_PedBegin->value();
-  int pedEnd = this->ui->SpinBox_PedEnd->value();
-  this->pedFit = std::unique_ptr< TF1 >(new TF1( "pedFit", linnn, Double_t(pedBegin), Double_t(pedEnd), 2));
-  this->pedFit->SetParameter(0, 110.);
-  this->pedFit->SetParameter(1, 0.07);
-  this->pedFit->SetParNames("y0","k");
-  this->pedCanvas->cd();
-  this->pedPad->cd();
-  this->pedGraph->Fit(this->pedFit.get(), "RB0");
-  this->pedFit->Draw("same");
-  this->pedPad->Update();
-  this->pedPad->Modified();
-}
-
-void MainWindow::onFitSignalClicked()
-{
-  int signalBegin = this->ui->SpinBox_SignalBegin->value();
-  int signalEnd = this->ui->SpinBox_SignalEnd->value();
-  this->signalFit = std::unique_ptr< TF1 >(new TF1( "signalFit", linnn, Double_t(signalBegin), Double_t(signalEnd), 2));
-  this->signalFit->SetParameter(0, 110.);
-  this->signalFit->SetParameter(1, 0.15);
-  this->signalFit->SetParNames("y0","k");
-  this->signalCanvas->cd();
-  this->signalPad->cd();
-  this->signalGraph->Fit(this->signalFit.get(), "RB0");
-  this->signalFit->Draw("same");
-  this->signalPad->Update();
-  this->signalPad->Modified();
-
-  double kped = this->pedFit->GetParameter(1);
-  double ksignal = this->signalFit->GetParameter(1);
-  double hped = kped * (signalEnd - signalBegin) * (signalEnd - signalBegin) / 2.;
-  double hsignal = ksignal * (signalEnd - signalBegin) * (signalEnd - signalBegin) / 2.;
-  qDebug() << Q_FUNC_INFO << "K ped: " << kped << ", K signal: " << ksignal << ", Integral value: " << (hsignal - hped);
-}
-
-void MainWindow::fitExpoSignalData(int expoTimer)
-{
-
-  std::pair< int, int >& pedRange = xrayPedSignalRange[0];
-
-  int pedBegin = pedRange.first;
-  int pedEnd = pedRange.second;
-  this->pedFit = std::unique_ptr< TF1 >(new TF1( "pedFit", linnn, Double_t(pedBegin), Double_t(pedEnd), 2));
-  this->pedFit->SetParameter(0, 110.);
-  this->pedFit->SetParameter(1, 0.07);
-  this->pedFit->SetParNames("y0","k");
-  this->signalCanvas->cd();
-  this->signalPad->cd();
-  this->signalGraph->Fit(this->pedFit.get(), "RB0");
-  this->pedFit->Draw("same");
-  this->pedPad->Update();
-  this->pedPad->Modified();
-
-  std::pair< int, int >& sigRange = xrayPedSignalRange[expoTimer];
-  int signalBegin = sigRange.first;
-  int signalEnd = sigRange.second;
-  this->signalFit = std::unique_ptr< TF1 >(new TF1( "signalFit", linnn, Double_t(signalBegin), Double_t(signalEnd), 2));
-  this->signalFit->SetParameter(0, 110.);
-  this->signalFit->SetParameter(1, 0.15);
-  this->signalFit->SetParNames("y0","k");
-  this->signalGraph->Fit(this->signalFit.get(), "RB0");
-  this->signalFit->Draw("same");
-  this->signalPad->Update();
-  this->signalPad->Modified();
-
-  double kped = this->pedFit->GetParameter(1);
-  double ksignal = this->signalFit->GetParameter(1);
-  double hped = kped * (signalEnd - signalBegin) * (signalEnd - signalBegin) / 2.;
-  double hsignal = ksignal * (signalEnd - signalBegin) * (signalEnd - signalBegin) / 2.;
-  qDebug() << Q_FUNC_INFO << "K ped: " << kped << ", K signal: " << ksignal << ", Integral value: " << (hsignal - hped);
 }

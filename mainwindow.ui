@@ -18,7 +18,7 @@
     <item row="0" column="1">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="control">
        <attribute name="title">
@@ -41,100 +41,6 @@
            <string>Acquisition</string>
           </property>
           <layout class="QGridLayout" name="gridLayout_25">
-           <item row="4" column="0">
-            <widget class="QPushButton" name="PushButton_ExternalStart">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>External start</string>
-             </property>
-            </widget>
-           </item>
-           <item row="11" column="0">
-            <widget class="QPushButton" name="pushButton_LowK2">
-             <property name="text">
-              <string>Low K2</string>
-             </property>
-            </widget>
-           </item>
-           <item row="13" column="0">
-            <widget class="QLabel" name="Label_TemperaturePressureExtCount">
-             <property name="text">
-              <string/>
-             </property>
-            </widget>
-           </item>
-           <item row="12" column="0">
-            <widget class="QPushButton" name="pushButton_HighK2">
-             <property name="text">
-              <string>High K2</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <layout class="QHBoxLayout" name="horizontalLayout_3">
-             <item>
-              <widget class="QLabel" name="Label_K1">
-               <property name="text">
-                <string>K1:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="RadioButton_LowK1">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>Low</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">ButtonGroup_K1</string>
-               </attribute>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="RadioButton_HighK1">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>High</string>
-               </property>
-               <property name="checked">
-                <bool>false</bool>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">ButtonGroup_K1</string>
-               </attribute>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item row="7" column="0">
-            <widget class="QPushButton" name="PushButton_ExternalCounter">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>External counter</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="0">
-            <widget class="QPushButton" name="PushButton_Test">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>Test</string>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="0">
             <layout class="QHBoxLayout" name="horizontalLayout_6">
              <item>
@@ -163,76 +69,191 @@
              </item>
             </layout>
            </item>
-           <item row="3" column="0">
-            <layout class="QHBoxLayout" name="horizontalLayout_4">
-             <item>
-              <widget class="QLabel" name="Label_K2">
-               <property name="text">
-                <string>K2:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="RadioButton_LowK2">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>Low</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">ButtonGroup_K2</string>
-               </attribute>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="RadioButton_HighK2">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>High</string>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">ButtonGroup_K2</string>
-               </attribute>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item row="8" column="0">
-            <widget class="QPushButton" name="pushButton_LowK1">
+           <item row="9" column="0">
+            <widget class="QLabel" name="Label_TemperaturePressureExtCount">
              <property name="text">
-              <string>Low K1</string>
+              <string/>
              </property>
             </widget>
            </item>
-           <item row="5" column="0">
-            <widget class="QPushButton" name="PushButton_Acquisition">
-             <property name="enabled">
+           <item row="2" column="0">
+            <widget class="QGroupBox" name="groupBox_DebugTest">
+             <property name="title">
+              <string>Debug and tests</string>
+             </property>
+             <property name="checkable">
               <bool>false</bool>
              </property>
-             <property name="text">
-              <string>Acquisition</string>
+             <property name="checked">
+              <bool>false</bool>
              </property>
+             <layout class="QGridLayout" name="gridLayout_10">
+              <item row="3" column="0">
+               <widget class="QPushButton" name="PushButton_Acquisition">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>Acquisition</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_3">
+                <item>
+                 <widget class="QLabel" name="Label_K1">
+                  <property name="text">
+                   <string>K1:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QRadioButton" name="RadioButton_LowK1">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>Low</string>
+                  </property>
+                  <property name="checked">
+                   <bool>true</bool>
+                  </property>
+                  <attribute name="buttonGroup">
+                   <string notr="true">ButtonGroup_K1</string>
+                  </attribute>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QRadioButton" name="RadioButton_HighK1">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>High</string>
+                  </property>
+                  <property name="checked">
+                   <bool>false</bool>
+                  </property>
+                  <attribute name="buttonGroup">
+                   <string notr="true">ButtonGroup_K1</string>
+                  </attribute>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_4">
+                <item>
+                 <widget class="QLabel" name="Label_K2">
+                  <property name="text">
+                   <string>K2:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QRadioButton" name="RadioButton_LowK2">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>Low</string>
+                  </property>
+                  <property name="checked">
+                   <bool>true</bool>
+                  </property>
+                  <attribute name="buttonGroup">
+                   <string notr="true">ButtonGroup_K2</string>
+                  </attribute>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QRadioButton" name="RadioButton_HighK2">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>High</string>
+                  </property>
+                  <attribute name="buttonGroup">
+                   <string notr="true">ButtonGroup_K2</string>
+                  </attribute>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="2" column="0">
+               <widget class="QPushButton" name="PushButton_ExternalStart">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>External start</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QPushButton" name="PushButton_Test">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>Test</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QPushButton" name="PushButton_ExternalCounter">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>External counter</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </item>
            <item row="10" column="0">
-            <widget class="QPushButton" name="pushButton_HighK1">
-             <property name="text">
-              <string>High K1</string>
-             </property>
-            </widget>
-           </item>
-           <item row="14" column="0">
             <widget class="QLabel" name="Label_AcquisitionData">
              <property name="text">
               <string/>
              </property>
             </widget>
+           </item>
+           <item row="0" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <item>
+              <widget class="QLabel" name="label_2">
+               <property name="text">
+                <string>Samples * 1000:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="SpinBox_Samples1k">
+               <property name="minimum">
+                <number>1</number>
+               </property>
+               <property name="maximum">
+                <number>100</number>
+               </property>
+               <property name="value">
+                <number>100</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="PushButton_SetSamples1k">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Set</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
           </layout>
          </widget>
@@ -258,7 +279,7 @@
              <string/>
             </property>
             <property name="text">
-             <string>/dev/cabin26_platform</string>
+             <string>/dev/channel26_DoseChamber</string>
             </property>
            </widget>
           </item>
@@ -369,6 +390,9 @@
             <layout class="QHBoxLayout" name="horizontalLayout_7">
              <item>
               <widget class="QPushButton" name="PushButton_Type1">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string>Type-1</string>
                </property>
@@ -376,6 +400,9 @@
              </item>
              <item>
               <widget class="QPushButton" name="PushButton_Type2">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string>Type-2</string>
                </property>
@@ -383,6 +410,9 @@
              </item>
              <item>
               <widget class="QPushButton" name="PushButton_Type3">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string>Type-3</string>
                </property>
@@ -390,6 +420,9 @@
              </item>
              <item>
               <widget class="QPushButton" name="PushButton_Type4">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string>Type-4</string>
                </property>
@@ -437,6 +470,9 @@
              </item>
              <item>
               <widget class="QPushButton" name="PushButton_PT">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string>Temperature and Pressure</string>
                </property>
@@ -453,6 +489,9 @@
            </item>
            <item row="3" column="0">
             <widget class="QPushButton" name="PushButton_SoftReset">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="text">
               <string>Reset</string>
              </property>
@@ -571,168 +610,6 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="fitData">
-       <attribute name="title">
-        <string>Fit</string>
-       </attribute>
-       <layout class="QGridLayout" name="gridLayout_9">
-        <item row="0" column="0">
-         <layout class="QGridLayout" name="gridLayout_8">
-          <item row="0" column="0">
-           <widget class="QRootCanvas" name="RootCanvas_Ped" native="true">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QRootCanvas" name="RootCanvas_Signal" native="true">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <layout class="QHBoxLayout" name="horizontalLayout_11">
-            <item>
-             <widget class="QLabel" name="label_8">
-              <property name="text">
-               <string>Ped range:</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSlider" name="HorizontalSlider_PedBegin">
-              <property name="maximum">
-               <number>1582</number>
-              </property>
-              <property name="singleStep">
-               <number>50</number>
-              </property>
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="tickPosition">
-               <enum>QSlider::NoTicks</enum>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="SpinBox_PedBegin">
-              <property name="maximum">
-               <number>1582</number>
-              </property>
-              <property name="singleStep">
-               <number>50</number>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSlider" name="HorizontalSlider_PedEnd">
-              <property name="maximum">
-               <number>1582</number>
-              </property>
-              <property name="pageStep">
-               <number>50</number>
-              </property>
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="SpinBox_PedEnd">
-              <property name="maximum">
-               <number>1582</number>
-              </property>
-              <property name="singleStep">
-               <number>50</number>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="PushButton_FitPed">
-              <property name="text">
-               <string>Fit</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="3" column="0">
-           <layout class="QHBoxLayout" name="horizontalLayout_12">
-            <item>
-             <widget class="QLabel" name="label_9">
-              <property name="text">
-               <string>Signal range:</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSlider" name="HorizontalSlider_SignalBegin">
-              <property name="maximum">
-               <number>1582</number>
-              </property>
-              <property name="singleStep">
-               <number>50</number>
-              </property>
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="SpinBox_SignalBegin">
-              <property name="maximum">
-               <number>1582</number>
-              </property>
-              <property name="singleStep">
-               <number>50</number>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSlider" name="HorizontalSlider_SignalEnd">
-              <property name="maximum">
-               <number>1582</number>
-              </property>
-              <property name="singleStep">
-               <number>50</number>
-              </property>
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="SpinBox_SignalEnd">
-              <property name="maximum">
-               <number>1582</number>
-              </property>
-              <property name="singleStep">
-               <number>50</number>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="PushButton_FitSignal">
-              <property name="text">
-               <string>Fit</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </item>
-       </layout>
-      </widget>
      </widget>
     </item>
    </layout>
@@ -758,136 +635,7 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections>
-  <connection>
-   <sender>HorizontalSlider_PedBegin</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>SpinBox_PedBegin</receiver>
-   <slot>setValue(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>172</x>
-     <y>408</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>295</x>
-     <y>408</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>SpinBox_PedBegin</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>HorizontalSlider_PedBegin</receiver>
-   <slot>setValue(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>295</x>
-     <y>408</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>172</x>
-     <y>408</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>HorizontalSlider_PedEnd</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>SpinBox_PedEnd</receiver>
-   <slot>setValue(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>418</x>
-     <y>408</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>540</x>
-     <y>408</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>SpinBox_PedEnd</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>HorizontalSlider_PedEnd</receiver>
-   <slot>setValue(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>540</x>
-     <y>408</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>418</x>
-     <y>408</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>SpinBox_SignalBegin</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>HorizontalSlider_SignalBegin</receiver>
-   <slot>setValue(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>315</x>
-     <y>770</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>196</x>
-     <y>770</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>HorizontalSlider_SignalBegin</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>SpinBox_SignalBegin</receiver>
-   <slot>setValue(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>196</x>
-     <y>770</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>315</x>
-     <y>770</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>SpinBox_SignalEnd</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>HorizontalSlider_SignalEnd</receiver>
-   <slot>setValue(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>554</x>
-     <y>770</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>435</x>
-     <y>770</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>HorizontalSlider_SignalEnd</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>SpinBox_SignalEnd</receiver>
-   <slot>setValue(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>435</x>
-     <y>770</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>554</x>
-     <y>770</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
  <buttongroups>
   <buttongroup name="ButtonGroup_K1"/>
   <buttongroup name="ButtonGroup_K2"/>

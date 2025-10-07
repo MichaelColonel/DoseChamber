@@ -58,6 +58,7 @@ private slots:
   void onType2Clicked();
   void onType3Clicked();
   void onType4Clicked();
+  void onSetSamplesClicked();
   void onSoftResetClicked();
   void onFirstConnectResponce();
   void onInitiateDeviceStopClicked();
@@ -65,15 +66,13 @@ private slots:
   void onTemperaturePressureClicked();
   void onOpenRootFileClicked();
   void onCurrentSpillItemChanged(QListWidgetItem* newItem,QListWidgetItem*);
-  void onFitPedClicked();
-  void onFitSignalClicked();
 
 private:
   void updateTemperaturePressureCounter();
-  void saveAcquisitionData(TGraph*, int xrayExpoTime, double t, double p, int adcCount);
+  void saveAcquisitionData(TGraph*, int samples, double t, double p, int adcCount);
   void saveSettings();
   void loadSettings();
-  void fitExpoSignalData(int expoTimer);
+  void enableButtons(bool enable);
 
   Ui::MainWindow *ui{ nullptr };
   QSerialPort* acquisitionPort{ nullptr };
@@ -97,8 +96,8 @@ private:
   TGraph* signalGraph{ nullptr }; // TGraph
 
   std::chrono::steady_clock::time_point timeWaitingBegin, timeWaitingEnd;
-  int xrayExpoTimer{ -1 };
   int externalCounter{ -1 };
+  int samples1k{ 100 };
   double sensorTemperature{ -1. };
   double sensorPressure{ -1. };
   TFile* rootFile{ nullptr };
