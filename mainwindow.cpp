@@ -237,12 +237,12 @@ void MainWindow::acquisitionSerialPortDataReady()
 
   this->acquisitionPortData.push_back(portData);
   constexpr int dataBegin = std::strlen("Start");
-  if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.size() == dataBegin)
-  {
-    qDebug() << Q_FUNC_INFO << "Slow extraction begins";
-    return;
-  }
-  else if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.endsWith("Finish"))
+//  if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.size() == dataBegin)
+//  {
+//    qDebug() << Q_FUNC_INFO << "Slow extraction begins";
+//    return;
+//  }
+  if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.endsWith("Finish"))
   {
     timeWaitingEnd = std::chrono::steady_clock::now();
     std::chrono::duration< float, std::milli > spillDuration(timeWaitingEnd - timeWaitingBegin);
@@ -388,6 +388,33 @@ void MainWindow::acquisitionSerialPortDataReady()
     this->acquisitionPortData.clear();
     return;
   }
+  else if (this->acquisitionPortData.size() == 3 &&
+    (this->acquisitionPortData.endsWith("OK") || this->acquisitionPortData.endsWith("NO")))
+  {
+    qDebug() << Q_FUNC_INFO << this->acquisitionPortData;
+    if (this->acquisitionPortData.endsWith("OK"))
+    {
+      ui->statusbar->showMessage(QObject::tr("Correct response: %1").arg(char(this->acquisitionPortData[0])), 3000);
+    }
+    else if (this->acquisitionPortData.endsWith("NO"))
+    {
+      ui->statusbar->showMessage(QObject::tr("Wrong response: %1").arg(char(this->acquisitionPortData[0])), 3000);
+    }
+    if (this->acquisitionPortData.startsWith('M') && this->acquisitionPortData.endsWith("OK"))
+    {
+      this->samples1k = this->ui->SpinBox_Samples1k->value();
+      qDebug() << Q_FUNC_INFO << "Set samples * 1000: " << this->samples1k;
+    }
+
+    if (this->initiationProgress->isVisible())
+    {
+      this->initiationProgress->hide();
+      this->initiationProgress->close();
+    }
+    this->initiationTimer->stop();
+    this->acquisitionPortData.clear();
+    return;
+  }
   else if (this->acquisitionPortData.size() == 5 && this->acquisitionPortData.startsWith('q') &&
       (this->acquisitionPortData.endsWith("OK") || this->acquisitionPortData.endsWith("NO")))
   {
@@ -454,17 +481,6 @@ void MainWindow::acquisitionSerialPortDataReady()
     this->sensorPressure = pressure;
     this->updateTemperaturePressureCounter();
     this->saveAcquisitionData(this->adcGraph, this->samples1k, temperature, pressure, this->externalCounter);
-    this->acquisitionPortData.clear();
-    return;
-  }
-  else if (this->acquisitionPortData.size() == 3 && this->acquisitionPortData.startsWith('M') &&
-      (this->acquisitionPortData.endsWith("OK") || this->acquisitionPortData.endsWith("NO")))
-  {
-    qDebug() << Q_FUNC_INFO << "Set samples * 1000 response:" << this->acquisitionPortData;
-    if (this->acquisitionPortData.endsWith("OK"))
-    {
-      this->samples1k = this->ui->SpinBox_Samples1k->value();
-    }
     this->acquisitionPortData.clear();
     return;
   }
@@ -995,6 +1011,7 @@ void MainWindow::onCurrentSpillItemChanged(QListWidgetItem* newItem,QListWidgetI
       this->ui->Label_AdcCount->setText(tr("ADC count: %1").arg(adcCount));
       this->ui->Label_Temperature->setText(tr("Temperature (C): %1").arg(temperature));
       this->ui->Label_Pressure->setText(tr("Pressure (mBar): %1").arg(pressure));
+      this->ui->Label_Samples1k->setText(tr("Samples * 1k: %1").arg(samples));
       this->ui->SpinBox_Samples1k->setValue(samples);
     }
     spillTree->SetBranchAddress("graph", &this->adcGraph);
@@ -1003,6 +1020,8 @@ void MainWindow::onCurrentSpillItemChanged(QListWidgetItem* newItem,QListWidgetI
     {
       spillTree->GetEntry(i);
     }
+    this->adcPad->Update();
+    this->adcPad->Modified();
   }
   f->Close();
 }
