@@ -237,11 +237,11 @@ void MainWindow::acquisitionSerialPortDataReady()
 
   this->acquisitionPortData.push_back(portData);
   constexpr int dataBegin = std::strlen("Start");
-//  if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.size() == dataBegin)
-//  {
-//    qDebug() << Q_FUNC_INFO << "Slow extraction begins";
-//    return;
-//  }
+  if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.size() == dataBegin)
+  {
+    qDebug() << Q_FUNC_INFO << "Slow extraction begins";
+    return;
+  }
   if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.endsWith("Finish"))
   {
     timeWaitingEnd = std::chrono::steady_clock::now();
