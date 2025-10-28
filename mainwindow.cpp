@@ -242,7 +242,7 @@ void MainWindow::acquisitionSerialPortDataReady()
     qDebug() << Q_FUNC_INFO << "Slow extraction begins";
     return;
   }
-  if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.endsWith("Finish"))
+  else if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.endsWith("Finish"))
   {
     timeWaitingEnd = std::chrono::steady_clock::now();
     std::chrono::duration< float, std::milli > spillDuration(timeWaitingEnd - timeWaitingBegin);
