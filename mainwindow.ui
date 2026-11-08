@@ -6,9 +6,21 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>700</width>
-    <height>615</height>
+    <width>590</width>
+    <height>820</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>1</horstretch>
+    <verstretch>1</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>300</width>
+    <height>300</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>DoseChamber</string>
@@ -18,47 +30,43 @@
     <item row="0" column="1">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="control">
        <attribute name="title">
         <string>Devices Control</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_3">
-        <item row="3" column="1">
-         <widget class="QRootCanvas" name="RootCanvas_AdcGraph" native="true">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-         </widget>
-        </item>
         <item row="1" column="1">
          <widget class="QGroupBox" name="GroupBox_Acquisition">
           <property name="title">
            <string>Acquisition</string>
           </property>
           <layout class="QGridLayout" name="gridLayout_25">
-           <item row="1" column="0">
-            <layout class="QHBoxLayout" name="horizontalLayout_6">
+           <item row="0" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_5">
              <item>
-              <widget class="QLabel" name="label_3">
+              <widget class="QLabel" name="label_7">
                <property name="text">
-                <string>External start:</string>
+                <string>Delay time:</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="CheckBox_ExternalStart">
-               <property name="text">
-                <string/>
+              <widget class="QSpinBox" name="SpinBox_DelayTime">
+               <property name="maximum">
+                <number>600</number>
+               </property>
+               <property name="singleStep">
+                <number>1</number>
+               </property>
+               <property name="value">
+                <number>200</number>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="PushButton_SetExternalStart">
+              <widget class="QPushButton" name="PushButton_DelayTime">
                <property name="enabled">
                 <bool>false</bool>
                </property>
@@ -69,14 +77,78 @@
              </item>
             </layout>
            </item>
-           <item row="9" column="0">
-            <widget class="QLabel" name="Label_TemperaturePressureExtCount">
-             <property name="text">
-              <string/>
-             </property>
-            </widget>
-           </item>
            <item row="2" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <item>
+              <widget class="QLabel" name="label_2">
+               <property name="text">
+                <string>Samples * 1000:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="SpinBox_Samples1k">
+               <property name="minimum">
+                <number>10</number>
+               </property>
+               <property name="maximum">
+                <number>250</number>
+               </property>
+               <property name="value">
+                <number>100</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="PushButton_SetSamples1k">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Set</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="1" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_9">
+             <item>
+              <widget class="QLabel" name="label_8">
+               <property name="text">
+                <string>Acquisition time:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="SpinBox_AcquisitionTime">
+               <property name="minimum">
+                <number>100</number>
+               </property>
+               <property name="maximum">
+                <number>3000</number>
+               </property>
+               <property name="singleStep">
+                <number>10</number>
+               </property>
+               <property name="value">
+                <number>900</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="PushButton_AcquisitionTime">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Set</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="5" column="0">
             <widget class="QGroupBox" name="groupBox_DebugTest">
              <property name="title">
               <string>Debug and tests</string>
@@ -88,58 +160,25 @@
               <bool>false</bool>
              </property>
              <layout class="QGridLayout" name="gridLayout_10">
-              <item row="3" column="0">
-               <widget class="QPushButton" name="PushButton_Acquisition">
+              <item row="5" column="0">
+               <widget class="QPushButton" name="PushButton_ExternalCounter">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
                 <property name="text">
-                 <string>Acquisition</string>
+                 <string>External counter</string>
                 </property>
                </widget>
               </item>
-              <item row="0" column="0">
-               <layout class="QHBoxLayout" name="horizontalLayout_3">
-                <item>
-                 <widget class="QLabel" name="Label_K1">
-                  <property name="text">
-                   <string>K1:</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QRadioButton" name="RadioButton_LowK1">
-                  <property name="enabled">
-                   <bool>false</bool>
-                  </property>
-                  <property name="text">
-                   <string>Low</string>
-                  </property>
-                  <property name="checked">
-                   <bool>true</bool>
-                  </property>
-                  <attribute name="buttonGroup">
-                   <string notr="true">ButtonGroup_K1</string>
-                  </attribute>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QRadioButton" name="RadioButton_HighK1">
-                  <property name="enabled">
-                   <bool>false</bool>
-                  </property>
-                  <property name="text">
-                   <string>High</string>
-                  </property>
-                  <property name="checked">
-                   <bool>false</bool>
-                  </property>
-                  <attribute name="buttonGroup">
-                   <string notr="true">ButtonGroup_K1</string>
-                  </attribute>
-                 </widget>
-                </item>
-               </layout>
+              <item row="4" column="0">
+               <widget class="QPushButton" name="PushButton_Test">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>Test</string>
+                </property>
+               </widget>
               </item>
               <item row="1" column="0">
                <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -191,60 +230,132 @@
                 </property>
                </widget>
               </item>
-              <item row="4" column="0">
-               <widget class="QPushButton" name="PushButton_Test">
+              <item row="0" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_3">
+                <item>
+                 <widget class="QLabel" name="Label_K1">
+                  <property name="text">
+                   <string>K1:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QRadioButton" name="RadioButton_LowK1">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>Low</string>
+                  </property>
+                  <property name="checked">
+                   <bool>true</bool>
+                  </property>
+                  <attribute name="buttonGroup">
+                   <string notr="true">ButtonGroup_K1</string>
+                  </attribute>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QRadioButton" name="RadioButton_HighK1">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>High</string>
+                  </property>
+                  <property name="checked">
+                   <bool>false</bool>
+                  </property>
+                  <attribute name="buttonGroup">
+                   <string notr="true">ButtonGroup_K1</string>
+                  </attribute>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="3" column="0">
+               <widget class="QPushButton" name="PushButton_Acquisition">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
                 <property name="text">
-                 <string>Test</string>
+                 <string>Acquisition</string>
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
-               <widget class="QPushButton" name="PushButton_ExternalCounter">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
+              <item row="6" column="0">
+               <widget class="QPushButton" name="PushButton_FitTest">
                 <property name="text">
-                 <string>External counter</string>
+                 <string>Fit test</string>
                 </property>
                </widget>
               </item>
              </layout>
             </widget>
            </item>
-           <item row="10" column="0">
+           <item row="13" column="0">
             <widget class="QLabel" name="Label_AcquisitionData">
              <property name="text">
               <string/>
              </property>
             </widget>
            </item>
-           <item row="0" column="0">
-            <layout class="QHBoxLayout" name="horizontalLayout">
+           <item row="4" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_6">
              <item>
-              <widget class="QLabel" name="label_2">
+              <widget class="QLabel" name="label_3">
                <property name="text">
-                <string>Samples * 1000:</string>
+                <string>External start:</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QSpinBox" name="SpinBox_Samples1k">
+              <widget class="QCheckBox" name="CheckBox_ExternalStart">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="PushButton_SetExternalStart">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Set</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="12" column="0">
+            <widget class="QLabel" name="Label_TemperaturePressureExtCount">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_12">
+             <item>
+              <widget class="QLabel" name="label_9">
+               <property name="text">
+                <string>Discharge:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="SpinBox_Discharge">
                <property name="minimum">
                 <number>1</number>
                </property>
                <property name="maximum">
-                <number>100</number>
-               </property>
-               <property name="value">
-                <number>100</number>
+                <number>255</number>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="PushButton_SetSamples1k">
+              <widget class="QPushButton" name="PushButton_SetDischarge">
                <property name="enabled">
                 <bool>false</bool>
                </property>
@@ -314,6 +425,36 @@
           </item>
          </layout>
         </item>
+        <item row="2" column="1">
+         <layout class="QHBoxLayout" name="horizontalLayout_11">
+          <item>
+           <widget class="TCanvasWidget" name="RootCanvas_AdcGraph" native="true">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>200</width>
+              <height>200</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="TCanvasWidget" name="RootCanvas_AdcGraphErr" native="true">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
        </layout>
       </widget>
       <widget class="QWidget" name="HP206C">
@@ -323,22 +464,32 @@
        <layout class="QGridLayout" name="gridLayout_5">
         <item row="0" column="0">
          <widget class="QGroupBox" name="groupBox">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="title">
            <string>HP206C I2C commands</string>
           </property>
           <layout class="QGridLayout" name="gridLayout_4">
-           <item row="7" column="0">
-            <spacer name="verticalSpacer">
+           <item row="2" column="0">
+            <widget class="QPushButton" name="PushButton_SoftReset">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Reset</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="Line" name="line_2">
              <property name="orientation">
-              <enum>Qt::Vertical</enum>
+              <enum>Qt::Horizontal</enum>
              </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>40</height>
-              </size>
-             </property>
-            </spacer>
+            </widget>
            </item>
            <item row="0" column="0">
             <layout class="QGridLayout" name="gridLayout_2">
@@ -386,6 +537,19 @@
              </item>
             </layout>
            </item>
+           <item row="7" column="0">
+            <widget class="QLabel" name="Label_TemperatureAndPressure">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
            <item row="1" column="0">
             <layout class="QHBoxLayout" name="horizontalLayout_7">
              <item>
@@ -430,14 +594,20 @@
              </item>
             </layout>
            </item>
-           <item row="2" column="0">
-            <widget class="Line" name="line">
+           <item row="8" column="0">
+            <spacer name="verticalSpacer">
              <property name="orientation">
-              <enum>Qt::Horizontal</enum>
+              <enum>Qt::Vertical</enum>
              </property>
-            </widget>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
            </item>
-           <item row="4" column="0">
+           <item row="5" column="0">
             <layout class="QHBoxLayout" name="horizontalLayout_8">
              <item>
               <widget class="QLabel" name="label_6">
@@ -480,23 +650,6 @@
              </item>
             </layout>
            </item>
-           <item row="6" column="0">
-            <widget class="QLabel" name="Label_TemperatureAndPressure">
-             <property name="text">
-              <string/>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QPushButton" name="PushButton_SoftReset">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>Reset</string>
-             </property>
-            </widget>
-           </item>
           </layout>
          </widget>
         </item>
@@ -509,20 +662,32 @@
        <layout class="QGridLayout" name="gridLayout_6">
         <item row="1" column="0">
          <widget class="QGroupBox" name="groupBox_5">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="title">
            <string>ROOT file data</string>
           </property>
           <layout class="QGridLayout" name="gridLayout_17">
            <item row="0" column="0">
             <layout class="QGridLayout" name="gridLayout_7">
-             <item row="0" column="1">
-              <widget class="QPushButton" name="PushButton_OpenFile">
+             <item row="8" column="0">
+              <widget class="QLabel" name="Label_AdcCount">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
                <property name="text">
-                <string>Open file...</string>
+                <string>ADC count:</string>
                </property>
               </widget>
              </item>
-             <item row="2" column="0">
+             <item row="5" column="0">
               <widget class="QLabel" name="Label_Samples1k">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -535,14 +700,60 @@
                </property>
               </widget>
              </item>
-             <item row="0" column="0" rowspan="2">
+             <item row="0" column="0" rowspan="5">
               <widget class="QListWidget" name="ListWidget_Spills">
                <property name="selectionMode">
-                <enum>QAbstractItemView::ExtendedSelection</enum>
+                <enum>QAbstractItemView::NoSelection</enum>
                </property>
               </widget>
              </item>
-             <item row="1" column="1">
+             <item row="6" column="0">
+              <widget class="QLabel" name="Label_Temperature">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Temperature (C):</string>
+               </property>
+              </widget>
+             </item>
+             <item row="7" column="0">
+              <widget class="QLabel" name="Label_Pressure">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Pressure (mBar):</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QPushButton" name="PushButton_OpenFile">
+               <property name="text">
+                <string>Open file...</string>
+               </property>
+              </widget>
+             </item>
+             <item row="8" column="1">
+              <widget class="QPushButton" name="PushButton_Process">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Process</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1" rowspan="7">
               <spacer name="verticalSpacer_2">
                <property name="orientation">
                 <enum>Qt::Vertical</enum>
@@ -555,40 +766,6 @@
                </property>
               </spacer>
              </item>
-             <item row="4" column="0">
-              <widget class="QLabel" name="Label_Pressure">
-               <property name="text">
-                <string>Pressure (mBar):</string>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="0">
-              <widget class="QLabel" name="Label_Temperature">
-               <property name="text">
-                <string>Temperature (C):</string>
-               </property>
-              </widget>
-             </item>
-             <item row="5" column="0">
-              <widget class="QLabel" name="Label_AdcCount">
-               <property name="text">
-                <string>ADC count:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="1" rowspan="5">
-              <widget class="QPushButton" name="PushButton_Process">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="text">
-                <string>Process</string>
-               </property>
-              </widget>
-             </item>
             </layout>
            </item>
           </layout>
@@ -598,6 +775,12 @@
          <layout class="QHBoxLayout" name="horizontalLayout_10">
           <item>
            <widget class="QLabel" name="Label_Prefix">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="text">
              <string>Prefix:</string>
             </property>
@@ -610,6 +793,159 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="tab">
+       <attribute name="title">
+        <string>HSPY</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_9">
+        <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout_8">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_10">
+            <property name="text">
+             <string>RS485:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
+           <widget class="QPushButton" name="PushButton_SetVoltage">
+            <property name="text">
+             <string>Set voltage</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QPushButton" name="PushButton_GetCurrent">
+            <property name="text">
+             <string>Get current</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QSpinBox" name="SpinBox_Voltage">
+            <property name="suffix">
+             <string> V</string>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>65</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_12">
+            <property name="text">
+             <string>Address:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QSlider" name="HorizontalSlider_Voltage">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>65</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1" colspan="2">
+           <widget class="QCheckBox" name="CheckBox_OnOff">
+            <property name="text">
+             <string>On / Off</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_13">
+            <property name="text">
+             <string>Run:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QSpinBox" name="SpinBox_DcAddress"/>
+          </item>
+          <item row="1" column="1" colspan="2">
+           <widget class="QSlider" name="HorizontalSlider_DcAddress">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="value">
+             <number>0</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1" colspan="2">
+           <widget class="QLineEdit" name="LineEdit_DcPowerSupply">
+            <property name="inputMask">
+             <string/>
+            </property>
+            <property name="text">
+             <string>/dev/RS485</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="3">
+           <widget class="QPushButton" name="PushButton_OnOff">
+            <property name="text">
+             <string>On/Off</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="3">
+           <widget class="QPushButton" name="PushButton_SetCurrent">
+            <property name="text">
+             <string>Set current</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QPushButton" name="PushButton_GetVoltage">
+            <property name="text">
+             <string>Get voltage</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QPushButton" name="PushButton_ConnectHspy">
+            <property name="text">
+             <string>Connect</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_11">
+            <property name="text">
+             <string>Voltage:</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="1" column="0">
+         <spacer name="verticalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -619,7 +955,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>700</width>
+     <width>590</width>
      <height>20</height>
     </rect>
    </property>
@@ -628,16 +964,81 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>QRootCanvas</class>
+   <class>TCanvasWidget</class>
    <extends>QWidget</extends>
-   <header>canvas.h</header>
+   <header>TCanvasWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>SpinBox_DcAddress</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>HorizontalSlider_DcAddress</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>528</x>
+     <y>106</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>280</x>
+     <y>106</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>HorizontalSlider_DcAddress</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>SpinBox_DcAddress</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>280</x>
+     <y>106</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>528</x>
+     <y>106</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>HorizontalSlider_Voltage</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>SpinBox_Voltage</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>256</x>
+     <y>136</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>461</x>
+     <y>136</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>SpinBox_Voltage</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>HorizontalSlider_Voltage</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>461</x>
+     <y>136</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>256</x>
+     <y>136</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
  <buttongroups>
-  <buttongroup name="ButtonGroup_K1"/>
   <buttongroup name="ButtonGroup_K2"/>
+  <buttongroup name="ButtonGroup_K1"/>
  </buttongroups>
 </ui>

@@ -15,30 +15,51 @@
  *      MA 02110-1301, USA.
  */
 
+#include <QTimer>
 #include <QApplication>
-#include <QTranslator>
-#include <QLocale>
+#include <QScopedPointer>
 
 #include <TApplication.h>
+#include <TSystem.h>
 
 #include "mainwindow.h"
 
-int main(int argc, char** argv)
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#include <QtWebEngine>
+#endif
+
+int main(int argc, char **argv)
 {
-  TApplication rootapp( "Qt ROOT Application", &argc, argv);
-  QApplication app( argc, argv);
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+   // must be called before creating QApplication, from Qt 5.13, not needed for Qt6
+   QtWebEngine::initialize();
+#endif
 
-//  QTranslator* translator = new QTranslator();
-//  translator->load( "DoseChamber_" + QLocale::system().name());
-//  app.installTranslator(translator);
+   argc = 1; // hide all additional parameters from ROOT and Qt
+   TApplication rootApp("Qt ROOT Application", &argc, argv); // ROOT application
 
-  MainWindow* window = new MainWindow();
-  window->show();
+   char* argv2[3] = {};
+   argv2[0] = argv[0];
+   argv2[1] = 0;
 
-  int res = app.exec();
+   QApplication qtApp(argc, argv2); // Qt application
 
-  delete window;
-//  delete translator;
+   // let run ROOT event loop
+   QScopedPointer< QTimer > timer(new QTimer());
+   QObject::connect(timer.data(), &QTimer::timeout, [](){ gSystem->ProcessEvents(); });
+   timer->setSingleShot(false);
+   timer->start(20);
 
-  return res;
+   // main window
+   QScopedPointer< MainWindow > window(new MainWindow());
+   window->show();
+
+   window->setWindowTitle(QString("DoseChamber ") + QT_VERSION_STR);
+
+   QObject::connect(&qtApp, SIGNAL(lastWindowClosed()), &qtApp, SLOT(quit()));
+
+   int res = qtApp.exec();
+   timer->stop();
+
+   return res;
 }

@@ -5,10 +5,8 @@
 #include <QByteArray>
 #include <QMainWindow>
 #include <QSerialPort> // serial port
+#include <QScopedPointer>
 
-#include <list>
-#include <array>
-#include <map>
 #include <chrono>
 #include <memory>
 
@@ -18,12 +16,15 @@ class QDataTime;
 class QProgressDialog;
 class QCheckBox;
 class QListWidgetItem;
+class QElapsedTimer;
 
 class TGraph;
+class TGraphErrors;
 class TPad;
 class TCanvas;
 class TFile;
 class TF1;
+class TH1;
 
 #define COMMAND_BUFFER_SIZE 3
 
@@ -40,7 +41,6 @@ public:
   ~MainWindow() override;
 
 private slots:
-  void onRootEventsTimeout();
   void onAcquisitionDeviceConnectClicked();
   void onAcquisitionDeviceDisconnectClicked();
   void acquisitionSerialPortBytesWritten(qint64);
@@ -49,6 +49,7 @@ private slots:
   void onExternalStartClicked();
   void onAcquisitionClicked();
   void onTestClicked();
+  void onFitTestClicked();
   void onSetExternalStartClicked();
   void onExternalCounterClicked();
   void onRadioGroupK1Changed(QAbstractButton* b);
@@ -58,6 +59,9 @@ private slots:
   void onType2Clicked();
   void onType3Clicked();
   void onType4Clicked();
+  void onSetDelayTimeClicked();
+  void onSetDischargeClicked();
+  void onSetAcquisitionTimeClicked();
   void onSetSamplesClicked();
   void onSoftResetClicked();
   void onFirstConnectResponce();
@@ -67,6 +71,16 @@ private slots:
   void onOpenRootFileClicked();
   void onCurrentSpillItemChanged(QListWidgetItem* newItem,QListWidgetItem*);
 
+  void onDcPowerSupplyConnectClicked();
+  void dcSerialPortBytesWritten(qint64);
+  void dcSerialPortDataReady();
+  void dcSerialPortError(QSerialPort::SerialPortError);
+  void onSetVoltageClicked();
+  void onSetCurrentClicked();
+  void onGetVoltageClicked();
+  void onGetCurrentClicked();
+  void onSetOutputClicked();
+
 private:
   void updateTemperaturePressureCounter();
   void saveAcquisitionData(TGraph*, int samples, double t, double p, int adcCount);
@@ -75,17 +89,24 @@ private:
   void enableButtons(bool enable);
 
   Ui::MainWindow *ui{ nullptr };
-  QSerialPort* acquisitionPort{ nullptr };
-  QTimer* timer{ nullptr }; // ROOT GUI update timer
-  QTimer* initiationTimer{ nullptr };
-  QProgressDialog* initiationProgress{ nullptr };
+  QScopedPointer< QSerialPort > acquisitionPort;
+  QScopedPointer< QSerialPort > dcSupplyPort;
+
+  QScopedPointer< QTimer > initiationTimer;
+  QScopedPointer< QProgressDialog > initiationProgress;
+  QScopedPointer< QElapsedTimer > elapsedTimer;
 
   QByteArray lastCommandData;
   QByteArray acquisitionPortData;
+  QByteArray dcPortData;
 
   TCanvas* adcCanvas{ nullptr }; // TCanvas
   TPad* adcPad{ nullptr }; // TPad
-  TGraph* adcGraph{ nullptr }; // TGraph
+  std::unique_ptr< TGraph > adcGraph; // TGraph
+
+  TCanvas* adcCanvasErr{ nullptr }; // TCanvas
+  TPad* adcPadErr{ nullptr }; // TPad
+  std::unique_ptr< TGraphErrors > adcGraphErr; // TGraphError
 
   TCanvas* pedCanvas{ nullptr }; // TCanvas
   TPad* pedPad{ nullptr }; // TPad
@@ -104,6 +125,8 @@ private:
   QString rootFileName;
   std::unique_ptr< TF1 > pedFit;
   std::unique_ptr< TF1 > signalFit;
+  std::unique_ptr< TF1 > fit;
+  std::unique_ptr< TCanvas > canvas;
 };
 
 #endif // MAINWINDOW_H

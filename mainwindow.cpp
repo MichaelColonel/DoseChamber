@@ -9,9 +9,13 @@
 #include <QSettings>
 #include <QProgressDialog>
 #include <QHBoxLayout>
+#include <QElapsedTimer>
 
 #include <TFile.h>
 #include <TTree.h>
+#include <TKey.h>
+#include <TF1.h>
+#include <TROOT.h>
 #include <TSystem.h>
 #include <TCanvas.h>
 #include <TGraph.h>
@@ -25,41 +29,135 @@
 #include <TServerSocket.h>
 #include <TMessage.h>
 #include <TGaxis.h>
+#include <TH1.h>
 
-#include <iomanip>
-#include <fstream>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/moment.hpp>
+
+#include <sstream>
 #include <bitset>
 #include <cstring>
-#include <algorithm>
-#include <numeric>
 
 namespace
 {
 
-constexpr double ADC_COUNT_TIME_MS = 1582.01 / 100000.;
+//constexpr double ADC_COUNT_TIME_MS = 1582.01 / 100000.;
+constexpr double ADC_COUNT_TIME_MS = 10.6E-03 * 4.;
+constexpr double DOSE_CHAMBER_CAPACITY = 275.; // pF
+bool acquisition_flag = false;
+
+typedef boost::accumulators::accumulator_set< \
+  Double_t, \
+  boost::accumulators::stats< \
+    boost::accumulators::tag::sum, \
+    boost::accumulators::tag::count, \
+    boost::accumulators::tag::mean, \
+    boost::accumulators::tag::moment< 2 > \
+  > \
+> MeanDispAccumSet;
+
+
+Double_t discharge(Double_t *x, Double_t* par)
+{
+  return par[0] * (1. - std::exp(-1. * par[1] * (x[0] - par[2])));
+}
+
+Double_t charge(Double_t *x, Double_t* par)
+{
+  return par[0] * std::exp(-1. * par[1] * (x[0] - par[2]));
+}
+
+Double_t line(Double_t *x, Double_t* par)
+{
+  return par[0] + x[0] * par[1];
+}
+
+unsigned short crc16_update(unsigned short crc, unsigned char a)
+{
+  crc ^= a;
+  for (int i = 0; i < CHAR_BIT; ++i)
+  {
+    if (crc & 1)
+    {
+      crc = (crc >> 1) ^ 0xA001;
+    }
+    else
+    {
+      crc = (crc >> 1);
+    }
+  }
+
+  return crc;
+}
+
+unsigned short crc16_calc(const unsigned char* buffer, size_t size)
+{
+  unsigned short crc = 0xFFFF;
+  for (size_t i = 0; i < size; ++i)
+  {
+    crc = crc16_update(crc, buffer[i]);
+  }
+
+  return crc;
+}
+
+bool check_crc16(const unsigned char* buffer, std::size_t dataSize)
+{
+  unsigned short dataCRC16 = crc16_calc(buffer, dataSize - 2); // calculated CRC16 check sum for buffer data
+  unsigned short comCRC16 = (buffer[dataSize - 1] << CHAR_BIT) | buffer[dataSize - 2]; // check sum from buffer
+  return (dataCRC16 == comCRC16);
+}
+
+const int decimation = 10;
 
 }
 
 MainWindow::MainWindow(QWidget *parent)
   : QMainWindow(parent)
   , ui(new Ui::MainWindow)
-  , timer(new QTimer(this))
+  , acquisitionPort(new QSerialPort(this))
+  , dcSupplyPort(new QSerialPort(this))
   , initiationTimer(new QTimer(this))
   , initiationProgress(new QProgressDialog(this))
+  , adcGraph(new TGraph(1000))
+  , elapsedTimer(new QElapsedTimer())
 {
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+  gROOT->SetWebDisplay("qt5");
+#else
+  gROOT->SetWebDisplay("qt6");
+#endif
   ui->setupUi(this);
 
   this->initiationProgress->setWindowTitle(tr("Dose chamber"));
+  this->initiationProgress->setAutoClose(false);
+  connect(this->initiationProgress.get(), SIGNAL(finished(int)), this, SLOT(onInitiateDeviceFinished(int)));
+  connect(this->initiationProgress.get(), SIGNAL(canceled()), this, SLOT(onInitiateDeviceStopClicked()));
+  this->initiationProgress->setLabelText("Reset ATmega64L input command buffer...");
+  this->initiationProgress->setRange(0, 0);
+  this->initiationProgress->close();
 
   this->adcCanvas = this->ui->RootCanvas_AdcGraph->getCanvas();
   this->adcCanvas->cd();
   this->adcPad = new TPad("adcPad", "Grid", 0., 0., 1., 1.);
-  this->adcPad->Draw();
   this->adcPad->SetGrid();
+  this->adcPad->Draw();
   this->adcPad->cd();
-  this->adcGraph = new TGraph(100000);
-  this->adcGraph->SetTitle("ADC data;Samples;ADC count");
+  this->adcGraph.reset(new TGraph());
+  this->adcGraph->SetTitle("ADC data;Time, ms;ADC count");
   this->adcGraph->Draw("AL*");
+
+  this->adcCanvasErr = this->ui->RootCanvas_AdcGraphErr->getCanvas();
+  this->adcCanvasErr->cd();
+  this->adcPadErr = new TPad("adcPadErr", "Grid", 0., 0., 1., 1.);
+  this->adcPadErr->SetGrid();
+  this->adcPadErr->Draw();
+  this->adcPadErr->cd();
+  this->adcGraphErr.reset(new TGraphErrors());
+  this->adcGraphErr->SetTitle("ADC data;Time, ms;ADC count");
+  this->adcGraphErr->Draw("AL*");
 
   connect( ui->PushButton_AcquisitionConnect, SIGNAL(clicked()), this, SLOT(onAcquisitionDeviceConnectClicked()));
   connect( ui->PushButton_AcquisitionDisconnect, SIGNAL(clicked()), this, SLOT(onAcquisitionDeviceDisconnectClicked()));
@@ -67,6 +165,9 @@ MainWindow::MainWindow(QWidget *parent)
   connect( ui->PushButton_Acquisition, SIGNAL(clicked()), this, SLOT(onAcquisitionClicked()));
   connect( ui->PushButton_ExternalCounter, SIGNAL(clicked()), this, SLOT(onExternalCounterClicked()));
   connect( ui->PushButton_Test, SIGNAL(clicked()), this, SLOT(onTestClicked()));
+  connect( ui->PushButton_DelayTime, SIGNAL(clicked()), this, SLOT(onSetDelayTimeClicked()));
+  connect( ui->PushButton_SetDischarge, SIGNAL(clicked()), this, SLOT(onSetDischargeClicked()));
+  connect( ui->PushButton_AcquisitionTime, SIGNAL(clicked()), this, SLOT(onSetAcquisitionTimeClicked()));
 
   connect( ui->PushButton_SetExternalStart, SIGNAL(clicked()), this, SLOT(onSetExternalStartClicked()));
 
@@ -77,35 +178,46 @@ MainWindow::MainWindow(QWidget *parent)
   connect( ui->PushButton_SoftReset, SIGNAL(clicked()), this, SLOT(onSoftResetClicked()));
   connect( ui->PushButton_PT, SIGNAL(clicked()), this, SLOT(onTemperaturePressureClicked()));
   connect( ui->PushButton_SetSamples1k, SIGNAL(clicked()), this, SLOT(onSetSamplesClicked()));
+  connect( ui->PushButton_FitTest, SIGNAL(clicked()), this, SLOT(onFitTestClicked()));
 
   connect( ui->PushButton_OpenFile, SIGNAL(clicked()), this, SLOT(onOpenRootFileClicked()));
   connect( ui->ListWidget_Spills, SIGNAL(currentItemChanged(QListWidgetItem*,QListWidgetItem*)), this, SLOT(onCurrentSpillItemChanged(QListWidgetItem*,QListWidgetItem*)));
 
   connect( ui->ButtonGroup_K1, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(onRadioGroupK1Changed(QAbstractButton*)));
   connect( ui->ButtonGroup_K2, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(onRadioGroupK2Changed(QAbstractButton*)));
-  connect( timer, SIGNAL(timeout()), this, SLOT(onRootEventsTimeout())); // iterate ROOT events
 
-  connect( initiationTimer, SIGNAL(timeout()), this, SLOT(onFirstConnectResponce())); // first responce timeout
+  connect(this->acquisitionPort.get(), SIGNAL(readyRead()), this, SLOT(acquisitionSerialPortDataReady()));
+  connect(this->acquisitionPort.get(), SIGNAL(bytesWritten(qint64)), this, SLOT(acquisitionSerialPortBytesWritten(qint64)));
+  connect(this->acquisitionPort.get(), SIGNAL(errorOccurred(QSerialPort::SerialPortError)), this, SLOT(acquisitionSerialPortError(QSerialPort::SerialPortError)));
+
+  connect(this->dcSupplyPort.get(), SIGNAL(readyRead()), this, SLOT(dcSerialPortDataReady()));
+  connect(this->dcSupplyPort.get(), SIGNAL(bytesWritten(qint64)), this, SLOT(dcSerialPortBytesWritten(qint64)));
+  connect(this->dcSupplyPort.get(), SIGNAL(errorOccurred(QSerialPort::SerialPortError)), this, SLOT(dcSerialPortError(QSerialPort::SerialPortError)));
+  connect(this->ui->PushButton_ConnectHspy, SIGNAL(clicked()), this, SLOT(onDcPowerSupplyConnectClicked()));
+  connect(this->ui->PushButton_OnOff, SIGNAL(clicked()), this, SLOT(onSetOutputClicked()));
+  connect(this->ui->PushButton_SetVoltage, SIGNAL(clicked()), this, SLOT(onSetVoltageClicked()));
+  connect(this->ui->PushButton_SetCurrent, SIGNAL(clicked()), this, SLOT(onSetCurrentClicked()));
+  connect(this->ui->PushButton_GetCurrent, SIGNAL(clicked()), this, SLOT(onGetCurrentClicked()));
+  connect(this->ui->PushButton_GetVoltage, SIGNAL(clicked()), this, SLOT(onGetVoltageClicked()));
+
+  connect( initiationTimer.get(), SIGNAL(timeout()), this, SLOT(onFirstConnectResponce())); // first responce timeout
   this->initiationTimer->setInterval(1000);
-
-  this->timer->start(20);
   loadSettings();
+  this->initiationTimer->stop();
 }
 
 MainWindow::~MainWindow()
 {
-  timer->stop();
   saveSettings();
 
   if (this->rootFile)
   {
-    this->rootFile->Close();
+    this->rootFile->Write();
+//    this->rootFile->Close();
     delete this->rootFile;
     this->rootFile = nullptr;
   }
 
-  delete this->adcGraph;
-  this->adcGraph = nullptr;
   delete this->adcPad;
   this->adcPad = nullptr;
 
@@ -122,96 +234,258 @@ MainWindow::~MainWindow()
   delete ui;
 }
 
-/**
- * @brief MainWindow::onRootEventsTimeout
- * Iterate ROOT events
- */
-void MainWindow::onRootEventsTimeout()
+void MainWindow::onDcPowerSupplyConnectClicked()
 {
-  // call the inner loop of ROOT
-  gSystem->ProcessEvents();
+  bool enabled = false;
+  if (this->dcSupplyPort && !this->dcSupplyPort->isOpen())
+  {
+    QString name = ui->LineEdit_DcPowerSupply->text();
+    this->dcSupplyPort->setPortName(name);
+
+    this->dcSupplyPort->setBaudRate(QSerialPort::Baud9600);
+    this->dcSupplyPort->setDataBits(QSerialPort::Data8);
+    this->dcSupplyPort->setParity(QSerialPort::NoParity);
+    this->dcSupplyPort->setStopBits(QSerialPort::OneStop);
+    this->dcSupplyPort->setFlowControl(QSerialPort::NoFlowControl);
+    enabled = this->dcSupplyPort->open(QIODevice::ReadWrite);
+    enabled &= this->dcSupplyPort->flush();
+    this->ui->PushButton_ConnectHspy->setText("Disconnect");
+  }
+  else if (this->dcSupplyPort && this->dcSupplyPort->isOpen())
+  {
+    this->dcSupplyPort->flush();
+    this->dcSupplyPort->close();
+    this->ui->PushButton_ConnectHspy->setText("Connect");
+  }
+  if (enabled)
+  {
+    qDebug() << "Device connected";
+  }
+  else
+  {
+    qDebug() << "Device disconnected";
+  }
+}
+
+void MainWindow::dcSerialPortBytesWritten(qint64 bytes)
+{
+  qDebug() << Q_FUNC_INFO << "Serial port data written bytes: " << bytes;
+}
+
+void MainWindow::dcSerialPortDataReady()
+{
+  int address = this->ui->HorizontalSlider_DcAddress->value();
+  QByteArray res = this->dcSupplyPort->readAll();
+  qDebug() << Q_FUNC_INFO << "Input res: " << res;
+  this->dcPortData.append(res);
+  const char* data = this->dcPortData.data();
+  const unsigned char* buf = reinterpret_cast< const unsigned char* >(data);
+  if (buf && (this->dcPortData.size() == 8) && (buf[0] == address) && (buf[1] == 0x06))
+  {
+    if (check_crc16(buf, 8))
+    {
+      qDebug() << Q_FUNC_INFO << "Output is changed";
+    }
+    else
+    {
+      qDebug() << Q_FUNC_INFO << "Output wrong CRC";
+    }
+    this->dcPortData.clear();
+  }
+  if (buf && (this->dcPortData.size() == 7) && (buf[0] == address) && (buf[1] == 0x03))
+  {
+    if (check_crc16(buf, 7) && buf[2] == 0x02)
+    {
+      uint16_t v = (buf[3] << CHAR_BIT) | buf[4];
+      qDebug() << Q_FUNC_INFO << "Voltage value: " << double(v) / double(decimation) << " V";
+    }
+    if (check_crc16(buf, 7) && buf[2] == 0x03)
+    {
+        uint16_t i = (buf[3] << CHAR_BIT) | buf[4];
+        qDebug() << Q_FUNC_INFO << "Current value: " << double(i) / double(decimation) << " mA";
+    }
+    if (!check_crc16(buf, 7))
+    {
+      qDebug() << Q_FUNC_INFO << "Output wrong CRC";
+    }
+    this->dcPortData.clear();
+  }
+}
+
+void MainWindow::dcSerialPortError(QSerialPort::SerialPortError)
+{
+}
+
+void MainWindow::onSetCurrentClicked()
+{
+  int current_mA = 20 * decimation;
+  int address = this->ui->HorizontalSlider_DcAddress->value();
+  uint8_t highCur = current_mA >> CHAR_BIT;
+  uint8_t lowCur = current_mA & 0xFF;
+  unsigned char command[8] = { static_cast< unsigned char >(address), 0x06, 0x10, 0x01, highCur, lowCur };
+  unsigned short checkS = crc16_calc(command, 6);
+  command[6] = checkS & 0xFF;
+  command[7] = (checkS >> CHAR_BIT);
+  QByteArray com = QByteArray::fromRawData(reinterpret_cast< char* >(command), 8);
+  if (this->dcSupplyPort && this->dcSupplyPort->isOpen())
+  {
+    qint64 res = dcSupplyPort->write(com);
+    if (res > 0)
+    {
+      qDebug() << Q_FUNC_INFO << "Written current: " << res;
+    }
+  }
+  else
+  {
+    qDebug() << Q_FUNC_INFO << "Can't write";
+  }
+}
+
+void MainWindow::onSetVoltageClicked()
+{
+  int volt = this->ui->HorizontalSlider_Voltage->value() * decimation;
+  int address = this->ui->HorizontalSlider_DcAddress->value();
+  uint8_t highVol = volt >> CHAR_BIT;
+  uint8_t lowVol = volt & 0xFF;
+  unsigned char command[8] = { static_cast< unsigned char >(address), 0x06, 0x10, 0x00, highVol, lowVol };
+  unsigned short checkS = crc16_calc(command, 6);
+  command[6] = checkS & 0xFF;
+  command[7] = (checkS >> CHAR_BIT);
+  QByteArray com = QByteArray::fromRawData(reinterpret_cast< char* >(command), 8);
+  if (this->dcSupplyPort && this->dcSupplyPort->isOpen())
+  {
+    qint64 res = dcSupplyPort->write(com);
+    if (res > 0)
+    {
+      qDebug() << Q_FUNC_INFO << "Written voltage: " << res;
+    }
+  }
+  else
+  {
+    qDebug() << Q_FUNC_INFO << "Can't write";
+  }
+}
+
+void MainWindow::onGetVoltageClicked()
+{
+  int address = this->ui->HorizontalSlider_DcAddress->value();
+  unsigned char command[8] = { static_cast< unsigned char >(address), 0x03, 0x10, 0x02, 0x00, 0x01 };
+  unsigned short checkS = crc16_calc(command, 6);
+  command[6] = checkS & 0xFF;
+  command[7] = (checkS >> CHAR_BIT);
+  QByteArray com = QByteArray::fromRawData(reinterpret_cast< char* >(command), 8);
+  if (this->dcSupplyPort && this->dcSupplyPort->isOpen())
+  {
+    qint64 res = dcSupplyPort->write(com);
+    if (res > 0)
+    {
+      qDebug() << Q_FUNC_INFO << "Get voltage: " << res;
+    }
+  }
+  else
+  {
+    qDebug() << Q_FUNC_INFO << "Can't write";
+  }
+}
+
+void MainWindow::onGetCurrentClicked()
+{
+  int address = this->ui->HorizontalSlider_DcAddress->value();
+  unsigned char command[8] = { static_cast< unsigned char >(address), 0x03, 0x10, 0x03, 0x00, 0x01 };
+  unsigned short checkS = crc16_calc(command, 6);
+  command[6] = checkS & 0xFF;
+  command[7] = (checkS >> CHAR_BIT);
+  QByteArray com = QByteArray::fromRawData(reinterpret_cast< char* >(command), 8);
+  if (this->dcSupplyPort && this->dcSupplyPort->isOpen())
+  {
+    qint64 res = dcSupplyPort->write(com);
+    if (res > 0)
+    {
+      qDebug() << Q_FUNC_INFO << "Get current: " << res;
+    }
+  }
+  else
+  {
+    qDebug() << Q_FUNC_INFO << "Can't write";
+  }
+}
+
+void MainWindow::onSetOutputClicked()
+{
+  bool state = this->ui->CheckBox_OnOff->isChecked();
+  int address = this->ui->HorizontalSlider_DcAddress->value();
+  unsigned char command[8] = { static_cast< unsigned char >(address), 0x06, 0x10, 0x04, 0x00, state };
+  unsigned short checkS = crc16_calc(command, 6);
+  command[6] = checkS & 0xFF;
+  command[7] = (checkS >> CHAR_BIT);
+  QByteArray com = QByteArray::fromRawData(reinterpret_cast< char* >(command), 8);
+  if (this->dcSupplyPort && this->dcSupplyPort->isOpen())
+  {
+    qint64 res = dcSupplyPort->write(com);
+    if (res > 0)
+    {
+      qDebug() << Q_FUNC_INFO << "Written state: " << res;
+    }
+  }
+  else
+  {
+    qDebug() << Q_FUNC_INFO << "Can't write";
+  }
 }
 
 void MainWindow::onAcquisitionDeviceConnectClicked()
 {
-  QString name = ui->LineEdit_AcquisitionDeviceName->text();
-  this->acquisitionPort = new QSerialPort(name, this);
-
   bool enabled = false;
-  if (this->acquisitionPort && this->acquisitionPort->open(QIODevice::ReadWrite))
+  if (this->acquisitionPort)
   {
-    this->acquisitionPort->setBaudRate(QSerialPort::Baud57600);
-    this->acquisitionPort->setDataBits(QSerialPort::Data8);
-    this->acquisitionPort->setParity(QSerialPort::NoParity);
-    this->acquisitionPort->setStopBits(QSerialPort::OneStop);
-    this->acquisitionPort->setFlowControl(QSerialPort::NoFlowControl);
+    QString name = ui->LineEdit_AcquisitionDeviceName->text();
+    this->acquisitionPort->setPortName(name);
 
-    connect(this->acquisitionPort, SIGNAL(readyRead()), this, SLOT(acquisitionSerialPortDataReady()));
-    connect(this->acquisitionPort, SIGNAL(bytesWritten(qint64)), this, SLOT(acquisitionSerialPortBytesWritten(qint64)));
-    connect(this->acquisitionPort, SIGNAL(error(QSerialPort::SerialPortError)), this, SLOT(acquisitionSerialPortError(QSerialPort::SerialPortError)));
-
-    connect( this->initiationProgress, SIGNAL(finished(int)), this, SLOT(onInitiateDeviceFinished(int)));
-    connect( this->initiationProgress, SIGNAL(canceled()), this, SLOT(onInitiateDeviceStopClicked()));
+//    this->acquisitionPort->setBaudRate(QSerialPort::Baud57600);
+//    this->acquisitionPort->setDataBits(QSerialPort::Data8);
+//    this->acquisitionPort->setParity(QSerialPort::NoParity);
+//    this->acquisitionPort->setStopBits(QSerialPort::OneStop);
+//    this->acquisitionPort->setFlowControl(QSerialPort::NoFlowControl);
 
     enabled = true;
     ui->statusbar->showMessage(QObject::tr("Acquisition device connected"), 1000);
-    this->acquisitionPort->flush();
     this->acquisitionPortData.clear();
 
-    this->initiationProgress->setLabelText("Reset ATmega64L input command buffer...");
-    this->initiationProgress->setRange(0, 0);
-    this->initiationProgress->setValue(0);
     this->initiationProgress->show();
     this->initiationTimer->start();
 
     QDateTime dateTime = QDateTime::currentDateTime();
     std::stringstream sstream;
     sstream << "RUN_" << dateTime.toString("ddMMyyyy_hhmmss").toStdString() << ".root";
-    std::string name = sstream.str();
+    std::string filename = sstream.str();
     if (this->rootFile)
     {
+      this->rootFile->Write();
       this->rootFile->Close();
       delete this->rootFile;
       this->rootFile = nullptr;
     }
-    this->rootFile = new TFile(name.c_str(), "RECREATE");
-
-  }
-  else if (this->acquisitionPort && !this->acquisitionPort->isOpen())
-  {
-    QMessageBox msgBox(this);
-    msgBox.setModal(true);
-    msgBox.setWindowTitle(tr("IC control"));
-    msgBox.setText(tr("Unable to connect device %1.\n%2.").arg(this->acquisitionPort->portName()).arg(this->acquisitionPort->errorString()));
-    msgBox.exec();
-    ui->statusbar->showMessage(QObject::tr("Unable to connect device"), 1000);
-
-    delete this->acquisitionPort;
-    this->acquisitionPort = nullptr;
+    this->rootFile = new TFile(filename.c_str(), "RECREATE");
+    enabled = this->acquisitionPort->open(QIODevice::ReadWrite);
+    enabled &= this->acquisitionPort->flush();
   }
   ui->PushButton_AcquisitionConnect->setEnabled(!enabled);
   ui->PushButton_AcquisitionDisconnect->setEnabled(enabled);
-  this->enableButtons(true);
+  this->enableButtons(enabled);
 }
 
 void MainWindow::onAcquisitionDeviceDisconnectClicked()
 {
-  constexpr bool enabled = false;
+  bool enabled = false;
   if (this->acquisitionPort && this->acquisitionPort->isOpen())
   {
     this->acquisitionPort->flush();
     this->acquisitionPort->close();
-    delete this->acquisitionPort;
-    this->acquisitionPort = nullptr;
-  }
-  else if (this->acquisitionPort && !this->acquisitionPort->isOpen())
-  {
-    delete this->acquisitionPort;
-    this->acquisitionPort = nullptr;
   }
 
   if (this->rootFile)
   {
+    this->rootFile->Write();
     this->rootFile->Close();
     delete this->rootFile;
     this->rootFile = nullptr;
@@ -222,6 +496,8 @@ void MainWindow::onAcquisitionDeviceDisconnectClicked()
   ui->PushButton_AcquisitionConnect->setEnabled(!enabled);
   ui->PushButton_AcquisitionDisconnect->setEnabled(enabled);
   this->enableButtons(false);
+
+  this->initiationTimer->stop();
 
   ui->statusbar->showMessage(QObject::tr("Acquisition device disconnected"), 1000);
 }
@@ -236,44 +512,102 @@ void MainWindow::acquisitionSerialPortDataReady()
   QByteArray portData = this->acquisitionPort->readAll();
 
   this->acquisitionPortData.push_back(portData);
-  constexpr int dataBegin = std::strlen("Start");
-//  if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.size() == dataBegin)
-//  {
-//    qDebug() << Q_FUNC_INFO << "Slow extraction begins";
-//    return;
-//  }
+
+  const int dataBegin = std::strlen("Start");
+  if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.size() == dataBegin)
+  {
+    qDebug() << Q_FUNC_INFO << "Slow extraction begins";
+    timeWaitingBegin = std::chrono::steady_clock::now();
+    this->elapsedTimer->start();
+    acquisition_flag = true;
+    return;
+  }
   if (this->acquisitionPortData.startsWith("Start") && this->acquisitionPortData.endsWith("Finish"))
   {
+    acquisition_flag = true;
     timeWaitingEnd = std::chrono::steady_clock::now();
     std::chrono::duration< float, std::milli > spillDuration(timeWaitingEnd - timeWaitingBegin);
     ui->statusbar->showMessage(QObject::tr("%1 ms").arg(spillDuration.count()), 3000);
 
-    qDebug() << Q_FUNC_INFO << "Spill time (ms): " << spillDuration.count();
+    qDebug() << Q_FUNC_INFO << "Spill time (ms): " << spillDuration.count() << ' ' << this->elapsedTimer->elapsed();
 
     const QByteArray& data = this->acquisitionPortData;
     int dataEnd = data.indexOf("Finish");
     std::vector< int > adcData;
-    constexpr int ADC_HIGH_BITS = 6;
+    constexpr int ADC_HIGH_BITS = CHAR_BIT;
     constexpr int ADC_LOW_BITS = CHAR_BIT;
     constexpr int ADC_BITS = ADC_LOW_BITS + ADC_HIGH_BITS;
     for (int i = dataBegin; i < dataEnd; i += 2)
     {
-      std::bitset< ADC_HIGH_BITS > high(data[i + 1] & 0x3F);
+      std::bitset< ADC_HIGH_BITS > high(data[i + 1]);
       std::bitset< ADC_LOW_BITS > low(data[i]);
-      std::bitset< ADC_BITS > count((high.to_ulong() << ADC_LOW_BITS) | low.to_ulong());
+      std::bitset< ADC_BITS > count((high.to_ulong() << 8) | low.to_ulong());
       adcData.push_back(static_cast< int >(count.to_ulong()));
     }
     qDebug() << Q_FUNC_INFO << "Slow extraction ends, data size: " << adcData.size() << " Time for ADC count: "
              << adcData.size() / spillDuration.count() << " ms^-1";
-    this->adcGraph->Set(static_cast< Int_t >(adcData.size()));
     int i = 0;
+    if (adcData.size())
+    {
+      this->adcCanvas->cd();
+      this->adcPad->cd();
+      if (this->adcGraph)
+      {
+        this->adcPad->GetListOfPrimitives()->Remove(this->adcGraph.get());
+      }
+      this->adcGraph.reset(new TGraph(adcData.size()));
+      this->adcGraph->SetTitle("ADC data;Time, ms;ADC count");
+    }
     for (int v : adcData)
     {
-      this->adcGraph->SetPoint( i, Double_t(i), Double_t(v));
+      this->adcGraph->SetPoint( i, Double_t(i * ADC_COUNT_TIME_MS), Double_t(v));
       i++;
     }
+    this->adcGraph->Draw("AL*");
+
     this->adcPad->Modified();
     this->adcPad->Update();
+
+    constexpr Int_t binWidthMs = 20;
+    Int_t nofBins = this->adcGraph->GetN() * ADC_COUNT_TIME_MS / Double_t(binWidthMs);
+    Int_t posBinWidth = this->adcGraph->GetN() / nofBins;
+    std::vector< double > vx, vy, vxerr, vyerr;
+
+    for (Int_t bin = 0; bin < nofBins; ++bin)
+    {
+      MeanDispAccumSet x, y;
+      for (Int_t i = 0; i < posBinWidth; ++i)
+      {
+        Double_t xPos, yPos;
+        Int_t pos = bin * posBinWidth + i;
+        this->adcGraph->GetPoint(pos, xPos , yPos);
+        x(xPos);
+        y(yPos);
+      }
+      Double_t meanX = boost::accumulators::mean(x);
+      Double_t meanY = boost::accumulators::mean(y);
+      Double_t mom2X = boost::accumulators::moment< 2 >(x);
+      Double_t mom2Y = boost::accumulators::moment< 2 >(y);
+      vx.push_back(meanX);
+      vy.push_back(meanY);
+      vxerr.push_back(std::sqrt(mom2X - meanX * meanX));
+      vyerr.push_back(std::sqrt(mom2Y - meanY * meanY));
+    }
+
+    TGraphErrors* graphErr = new TGraphErrors(nofBins);
+    for (int i = 0; i < nofBins; ++i)
+    {
+      graphErr->SetPoint(i, vx[i], vy[i]);
+      graphErr->SetPointError(i, vxerr[i], vyerr[i]);
+    }
+    this->adcPadErr->Clear();
+    this->adcPadErr->cd();
+    this->adcGraphErr.reset(graphErr);
+    this->adcGraphErr->SetTitle("ADC data;Time, ms;ADC count");
+    this->adcGraphErr->Draw("AL*");
+    this->adcPadErr->Update();
+    this->adcPadErr->Modified();
+/*
     if (adcData.size())
     {
       int v0 = adcData[0];
@@ -284,10 +618,12 @@ void MainWindow::acquisitionSerialPortDataReady()
     {
       this->ui->Label_AcquisitionData->setText("");
     }
-    int pos = this->acquisitionPortData.indexOf("Finish");
-    constexpr int finishLen = std::strlen("Finish");
-    this->acquisitionPortData.remove(0, pos + finishLen);
-//    this->acquisitionPortData.clear();
+*/
+    this->acquisitionPortData.clear();
+    if (acquisition_flag)
+    {
+      this->onExternalCounterClicked();
+    }
     return;
   }
   else if (this->acquisitionPortData.size() == 6 && this->acquisitionPortData.startsWith('C') && this->acquisitionPortData.endsWith("OK"))
@@ -302,12 +638,15 @@ void MainWindow::acquisitionSerialPortDataReady()
     qDebug() << Q_FUNC_INFO << "T1 counter: " << count;
     ui->statusbar->showMessage(QObject::tr("T1 external counter: %1").arg(count), 3000);
     int pos = this->acquisitionPortData.indexOf("OK");
-    constexpr int finishOK = std::strlen("OK");
+    const int finishOK = std::strlen("OK");
     this->acquisitionPortData.remove(0, pos + finishOK);
 
     this->externalCounter = count;
-    this->updateTemperaturePressureCounter();
-//    this->acquisitionPortData.clear();
+    this->acquisitionPortData.clear();
+    if (acquisition_flag)
+    {
+      this->onTemperaturePressureClicked();
+    }
     return;
   }
   else if (this->acquisitionPortData.size() == 3 && (this->acquisitionPortData.startsWith('1') || this->acquisitionPortData.startsWith('2')) &&
@@ -384,7 +723,6 @@ void MainWindow::acquisitionSerialPortDataReady()
     this->sensorTemperature = temperature;
     this->sensorPressure = pressure;
     this->updateTemperaturePressureCounter();
-
     this->acquisitionPortData.clear();
     return;
   }
@@ -405,9 +743,17 @@ void MainWindow::acquisitionSerialPortDataReady()
       this->samples1k = this->ui->SpinBox_Samples1k->value();
       qDebug() << Q_FUNC_INFO << "Set samples * 1000: " << this->samples1k;
     }
-
-    if (this->initiationProgress->isVisible())
+    if (this->acquisitionPortData.startsWith('d') && this->acquisitionPortData.endsWith("OK"))
     {
+      qDebug() << Q_FUNC_INFO << "Delay time is set";
+    }
+    if (this->acquisitionPortData.startsWith('D') && this->acquisitionPortData.endsWith("OK"))
+    {
+      qDebug() << Q_FUNC_INFO << "Acquisition time is set";
+    }
+    if (this->acquisitionPortData.contains("eOK"))
+    {
+      qDebug() << Q_FUNC_INFO << "Initiation is finished";
       this->initiationProgress->hide();
       this->initiationProgress->close();
     }
@@ -480,7 +826,11 @@ void MainWindow::acquisitionSerialPortDataReady()
     this->sensorTemperature = temperature;
     this->sensorPressure = pressure;
     this->updateTemperaturePressureCounter();
-    this->saveAcquisitionData(this->adcGraph, this->samples1k, temperature, pressure, this->externalCounter);
+    if (acquisition_flag)
+    {
+      this->saveAcquisitionData(this->adcGraph.get(), this->samples1k, temperature, pressure, this->externalCounter);
+      acquisition_flag = false;
+    }
     this->acquisitionPortData.clear();
     return;
   }
@@ -493,6 +843,7 @@ void MainWindow::acquisitionSerialPortError(QSerialPort::SerialPortError)
 void MainWindow::onExternalStartClicked()
 {
   char buf[COMMAND_BUFFER_SIZE] = { 'a' };
+//  char buf[COMMAND_BUFFER_SIZE] = { 's' };
   this->lastCommandData = QByteArray( buf, COMMAND_BUFFER_SIZE);
 
   if (this->acquisitionPort && this->acquisitionPort->isOpen())
@@ -500,7 +851,7 @@ void MainWindow::onExternalStartClicked()
     bool result = this->acquisitionPort->write(this->lastCommandData);
     if (result)
     {
-      timeWaitingBegin = std::chrono::steady_clock::now();
+      this->elapsedTimer->start();
       qDebug() << Q_FUNC_INFO << "External start";
     }
   }
@@ -517,6 +868,7 @@ void MainWindow::onAcquisitionClicked()
     if (result)
     {
       timeWaitingBegin = std::chrono::steady_clock::now();
+      this->elapsedTimer->start();
       qDebug() << Q_FUNC_INFO << "Acquisition";
     }
   }
@@ -524,7 +876,8 @@ void MainWindow::onAcquisitionClicked()
 
 void MainWindow::onTestClicked()
 {
-  unsigned char buf[COMMAND_BUFFER_SIZE] = { 'X' };
+//  unsigned char buf[COMMAND_BUFFER_SIZE] = { 'X' };
+  unsigned char buf[COMMAND_BUFFER_SIZE] = { 'x' };
   this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
 
   if (this->acquisitionPort && this->acquisitionPort->isOpen())
@@ -532,6 +885,7 @@ void MainWindow::onTestClicked()
     bool result = this->acquisitionPort->write(this->lastCommandData);
     if (result)
     {
+      this->elapsedTimer->start();
       timeWaitingBegin = std::chrono::steady_clock::now();
       qDebug() << Q_FUNC_INFO << "Test";
     }
@@ -650,6 +1004,58 @@ void MainWindow::onSetExternalStartClicked()
     if (result)
     {
       qDebug() << Q_FUNC_INFO << "External start: " << e;
+    }
+  }
+}
+
+void MainWindow::onSetDelayTimeClicked()
+{
+  int delay = ui->SpinBox_DelayTime->value();
+  unsigned char buf[COMMAND_BUFFER_SIZE] = { 'd' };
+  buf[1] = (delay >> CHAR_BIT) & 0xFF;
+  buf[2] = delay & 0xFF;
+  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
+
+  if (this->acquisitionPort && this->acquisitionPort->isOpen())
+  {
+    bool result = this->acquisitionPort->write(this->lastCommandData);
+    if (result)
+    {
+      qDebug() << Q_FUNC_INFO << "Delay time: " << delay << " ms";
+    }
+  }
+}
+
+void MainWindow::onSetDischargeClicked()
+{
+  int dis = ui->SpinBox_Discharge->value();
+  unsigned char buf[COMMAND_BUFFER_SIZE] = { 'Q', static_cast< unsigned char >(dis) };
+  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
+
+  if (this->acquisitionPort && this->acquisitionPort->isOpen())
+  {
+    bool result = this->acquisitionPort->write(this->lastCommandData);
+    if (result)
+    {
+      qDebug() << Q_FUNC_INFO << "Discharge: " << dis;
+    }
+  }
+}
+
+void MainWindow::onSetAcquisitionTimeClicked()
+{
+  int delay = ui->SpinBox_AcquisitionTime->value();
+  unsigned char buf[COMMAND_BUFFER_SIZE] = { 'D' };
+  buf[1] = (delay >> CHAR_BIT) & 0xFF;
+  buf[2] = delay & 0xFF;
+  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
+
+  if (this->acquisitionPort && this->acquisitionPort->isOpen())
+  {
+    bool result = this->acquisitionPort->write(this->lastCommandData);
+    if (result)
+    {
+      qDebug() << Q_FUNC_INFO << "Acquisition time: " << delay << " ms";
     }
   }
 }
@@ -860,6 +1266,7 @@ void MainWindow::onInitiateDeviceStopClicked()
 
 void MainWindow::onInitiateDeviceFinished(int res)
 {
+  this->initiationTimer->stop();
   qDebug() << Q_FUNC_INFO << "finished result:" << res;
 }
 
@@ -905,8 +1312,11 @@ void MainWindow::enableButtons(bool enable)
 {
   ui->PushButton_ExternalStart->setEnabled(enable);
   ui->PushButton_Acquisition->setEnabled(enable);
+  ui->PushButton_SetDischarge->setEnabled(enable);
   ui->PushButton_ExternalCounter->setEnabled(enable);
   ui->PushButton_SetExternalStart->setEnabled(enable);
+  ui->PushButton_DelayTime->setEnabled(enable);
+  ui->PushButton_AcquisitionTime->setEnabled(enable);
   ui->PushButton_Test->setEnabled(enable);
   ui->RadioButton_HighK1->setEnabled(enable);
   ui->RadioButton_HighK2->setEnabled(enable);
@@ -924,7 +1334,7 @@ void MainWindow::enableButtons(bool enable)
 void MainWindow::onOpenRootFileClicked()
 {
   QFileDialog* dialog = new QFileDialog( this, tr("Open ROOT File..."));
-  QStringList fileNames;
+  QStringList fileNames, filters;
 
   dialog->setAcceptMode(QFileDialog::AcceptOpen);
   dialog->setFileMode(QFileDialog::ExistingFile);
@@ -991,6 +1401,11 @@ void MainWindow::onCurrentSpillItemChanged(QListWidgetItem* newItem,QListWidgetI
 
   QString treeName = newItem->text();
   std::string treeStdName = treeName.toStdString();
+  QString dateName = treeName.left(15);
+  QDateTime dt = QDateTime::fromString(dateName, "ddMMyyyy_hhmmss");
+  QDateTime dt1 = dt.addSecs(-234);
+  qDebug() << Q_FUNC_INFO << dt1.toString("ddMMyyyy_hhmmss");
+
   TTree* spillTree = dynamic_cast< TTree* >(f->Get(treeStdName.c_str()));
   int samples = -1;
   double pressure = -1.;
@@ -1014,14 +1429,150 @@ void MainWindow::onCurrentSpillItemChanged(QListWidgetItem* newItem,QListWidgetI
       this->ui->Label_Samples1k->setText(tr("Samples * 1k: %1").arg(samples));
       this->ui->SpinBox_Samples1k->setValue(samples);
     }
-    spillTree->SetBranchAddress("graph", &this->adcGraph);
+    TGraph* graph = this->adcGraph.get();
+    spillTree->SetBranchAddress("graph", &graph);
     nentries = static_cast<Int_t>(spillTree->GetEntries());
     for (Int_t i = 0; i < nentries; i++)
     {
       spillTree->GetEntry(i);
     }
-    this->adcPad->Update();
-    this->adcPad->Modified();
   }
   f->Close();
+  this->adcPad->Modified();
+  this->adcPad->Update();
+
+  constexpr Int_t binWidthMs = 20;
+  Int_t nofBins = this->adcGraph->GetN() * ADC_COUNT_TIME_MS / Double_t(binWidthMs);
+  Int_t posBinWidth = this->adcGraph->GetN() / nofBins;
+  std::vector< double > vx, vy, vxerr, vyerr;
+
+  for (Int_t bin = 0; bin < nofBins; ++bin)
+  {
+    MeanDispAccumSet x, y;
+    for (Int_t i = 0; i < posBinWidth; ++i)
+    {
+      Double_t xPos, yPos;
+      Int_t pos = bin * posBinWidth + i;
+      this->adcGraph->GetPoint(pos, xPos , yPos);
+      x(xPos);
+      y(yPos);
+    }
+    Double_t meanX = boost::accumulators::mean(x);
+    Double_t meanY = boost::accumulators::mean(y);
+    Double_t mom2X = boost::accumulators::moment< 2 >(x);
+    Double_t mom2Y = boost::accumulators::moment< 2 >(y);
+    vx.push_back(meanX);
+    vy.push_back(meanY);
+    vxerr.push_back(std::sqrt(mom2X - meanX * meanX));
+    vyerr.push_back(std::sqrt(mom2Y - meanY * meanY));
+  }
+
+  TGraphErrors* graphErr = new TGraphErrors(nofBins);
+  for (int i = 0; i < nofBins; ++i)
+  {
+    graphErr->SetPoint(i, vx[i], vy[i]);
+    graphErr->SetPointError(i, vxerr[i], vyerr[i]);
+  }
+  this->adcPadErr->Clear();
+  this->adcPadErr->cd();
+  graphErr->SetTitle("ADC data;Time, ms;ADC count");
+  graphErr->Draw("AL*");
+  this->adcGraphErr.reset(graphErr);
+  this->adcPadErr->Update();
+  this->adcPadErr->Modified();
+  Double_t initValue = this->adcGraphErr->GetPointY(0);
+  Double_t integralValue = this->adcGraphErr->GetPointY(0) - initValue;
+  Double_t initPos = this->adcGraphErr->GetPointX(0);
+  integralValue *= initPos;
+  for (Int_t i = 1; i < this->adcGraphErr->GetN(); ++i)
+  {
+    Double_t y, x;
+    this->adcGraphErr->GetPoint(i, x, y);
+    Double_t width = x - initPos;
+    integralValue += (y - initValue) * width;
+    initPos = x;
+    if (x <= 880.)
+    {
+      qDebug() << "ADC counts:" << "X:" << x << " y:" << y << "initValue:" << initValue << "integralValue:" << integralValue;
+    }
+  }
+/*
+  QScopedPointer< QFile > dataFile(new QFile("/tmp/DoseChamber_dump.txt"));
+  bool res = dataFile->open(QIODevice::WriteOnly | QIODevice::Text);
+  if (!res)
+  {
+    return;
+  }
+
+  QTextStream dataFileStream(dataFile.get()); // dump info to temp file for amplitude calibration
+  for (Int_t i = 0; i < this->adcGraph->GetN(); ++i)
+  {
+    Double_t y, x;
+    this->adcGraph->GetPoint(i, x, y);
+    int yy = int(y);
+    dataFileStream << Qt::dec << i << ' ' << Qt::hex << " 0x" << (yy >> CHAR_BIT) << " 0x" << (yy & 0xFF) << " 0x" << yy << Qt::endl;
+  }
+  dataFileStream.flush();
+  res = dataFile->flush();
+  if (res)
+  {
+    dataFile->close();
+  }
+*/
+}
+
+void MainWindow::onFitTestClicked()
+{
+/*
+  if (this->canvas && this->adcGraphErr)
+  {
+    this->canvas->GetListOfPrimitives()->Remove(this->adcGraphErr.get());
+  }
+  if (this->canvas && this->fit)
+  {
+    this->canvas->GetListOfPrimitives()->Remove(this->fit.get());
+  }
+
+  this->canvas.reset(new TCanvas("standalone", "Standalone canvas"));
+  this->canvas->cd();
+
+  this->adcGraphErr->Draw("AL*");
+*/
+  this->adcPadErr->cd();
+  TF1* form = new TF1("lin", line, 100., 200., 2);
+  form->SetParameter(0, 1000.);
+  form->SetParLimits(0,-1000., 2000.);
+  form->SetParameter(1, 1.);
+  form->SetParLimits(1, 0.1, 10.);
+  this->adcGraphErr->Fit(form, "RB0");
+  form->Draw("SAME");
+  this->fit.reset(form);
+  this->adcPadErr->Modified();
+  this->adcPadErr->Update();
+//  canvas->Modified();
+//  canvas->Update();
+/*
+  this->pedFit = std::unique_ptr< TF1 >(new TF1( "pedFit", discharge, 0.9, 5.0, 3));
+  this->pedFit->SetParameter(0, 16383.);
+  this->pedFit->SetParameter(1, 500.);
+  this->pedFit->SetParameter(2, 0.9);
+  this->pedFit->SetParNames("U0","tau", "t0");
+  this->adcCanvas->cd();
+  this->adcPad->cd();
+  this->pedGraph->Fit(this->pedFit.get(), "RB0");
+  this->pedFit->Draw("same");
+  this->adcPad->Update();
+  this->adcPad->Modified();
+*/
+/*
+  this->signalFit = std::unique_ptr< TF1 >(new TF1( "sigFit", charge, 128.8, 137.7, 3));
+  this->signalFit->SetParameter(0, 16383.);
+  this->signalFit->SetParameter(1, 500.);
+  this->signalFit->SetParameter(2, 128.8);
+  this->signalFit->SetParNames("U0","tau", "t2");
+  this->pedCanvas->cd();
+  this->pedPad->cd();
+  this->pedGraph->Fit(this->signalFit.get(), "RB0");
+  this->signalFit->Draw("same");
+*/
 }
