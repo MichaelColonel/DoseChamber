@@ -80,6 +80,9 @@ private slots:
   void onGetVoltageClicked();
   void onGetCurrentClicked();
   void onSetOutputClicked();
+  void onSetXray1Clicked();
+  void onSetXray2Clicked();
+  void onResetXray12Clicked();
 
 private:
   void updateTemperaturePressureCounter();

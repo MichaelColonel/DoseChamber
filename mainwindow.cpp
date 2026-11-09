@@ -200,6 +200,10 @@ MainWindow::MainWindow(QWidget *parent)
   connect(this->ui->PushButton_GetCurrent, SIGNAL(clicked()), this, SLOT(onGetCurrentClicked()));
   connect(this->ui->PushButton_GetVoltage, SIGNAL(clicked()), this, SLOT(onGetVoltageClicked()));
 
+  connect(this->ui->PushButton_SetXray1, SIGNAL(clicked()), this, SLOT(onSetXray1Clicked()));
+  connect(this->ui->PushButton_SetXray2, SIGNAL(clicked()), this, SLOT(onSetXray2Clicked()));
+  connect(this->ui->PushButton_ResetXray12, SIGNAL(clicked()), this, SLOT(onResetXray12Clicked()));
+
   connect( initiationTimer.get(), SIGNAL(timeout()), this, SLOT(onFirstConnectResponce())); // first responce timeout
   this->initiationTimer->setInterval(1000);
   loadSettings();
@@ -217,7 +221,13 @@ MainWindow::~MainWindow()
     delete this->rootFile;
     this->rootFile = nullptr;
   }
+  this->adcPad->GetListOfPrimitives()->Remove(this->adcGraph.get());
+  this->adcPadErr->GetListOfPrimitives()->Remove(this->adcGraphErr.get());
 
+  this->adcGraph.reset();
+  this->adcGraphErr.reset();
+
+/*
   delete this->adcPad;
   this->adcPad = nullptr;
 
@@ -230,7 +240,7 @@ MainWindow::~MainWindow()
   this->signalGraph = nullptr;
   delete this->signalPad;
   this->signalPad = nullptr;
-
+*/
   delete ui;
 }
 
@@ -1575,4 +1585,49 @@ void MainWindow::onFitTestClicked()
   this->pedGraph->Fit(this->signalFit.get(), "RB0");
   this->signalFit->Draw("same");
 */
+}
+
+void MainWindow::onSetXray1Clicked()
+{
+  unsigned char buf[COMMAND_BUFFER_SIZE] = { '5' };
+  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
+
+  if (this->acquisitionPort && this->acquisitionPort->isOpen())
+  {
+    bool result = this->acquisitionPort->write(this->lastCommandData);
+    if (result)
+    {
+      qDebug() << Q_FUNC_INFO << "Set x-ray 1:";
+    }
+  }
+}
+
+void MainWindow::onSetXray2Clicked()
+{
+  unsigned char buf[COMMAND_BUFFER_SIZE] = { '6' };
+  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
+
+  if (this->acquisitionPort && this->acquisitionPort->isOpen())
+  {
+    bool result = this->acquisitionPort->write(this->lastCommandData);
+    if (result)
+    {
+      qDebug() << Q_FUNC_INFO << "Set x-ray 2:";
+    }
+  }
+}
+
+void MainWindow::onResetXray12Clicked()
+{
+  unsigned char buf[COMMAND_BUFFER_SIZE] = { '7' };
+  this->lastCommandData = QByteArray( reinterpret_cast<char*>(buf), COMMAND_BUFFER_SIZE);
+
+  if (this->acquisitionPort && this->acquisitionPort->isOpen())
+  {
+    bool result = this->acquisitionPort->write(this->lastCommandData);
+    if (result)
+    {
+      qDebug() << Q_FUNC_INFO << "Reset x-ray 1 and 2:";
+    }
+  }
 }

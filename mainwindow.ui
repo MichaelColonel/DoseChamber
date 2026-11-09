@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>590</width>
-    <height>820</height>
+    <width>575</width>
+    <height>978</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -160,13 +160,13 @@
               <bool>false</bool>
              </property>
              <layout class="QGridLayout" name="gridLayout_10">
-              <item row="5" column="0">
-               <widget class="QPushButton" name="PushButton_ExternalCounter">
+              <item row="3" column="0">
+               <widget class="QPushButton" name="PushButton_Acquisition">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
                 <property name="text">
-                 <string>External counter</string>
+                 <string>Acquisition</string>
                 </property>
                </widget>
               </item>
@@ -177,6 +177,16 @@
                 </property>
                 <property name="text">
                  <string>Test</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QPushButton" name="PushButton_ExternalStart">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>External start</string>
                 </property>
                </widget>
               </item>
@@ -220,13 +230,34 @@
                 </item>
                </layout>
               </item>
-              <item row="2" column="0">
-               <widget class="QPushButton" name="PushButton_ExternalStart">
+              <item row="6" column="0">
+               <widget class="QPushButton" name="PushButton_FitTest">
+                <property name="text">
+                 <string>Fit test</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0">
+               <widget class="QPushButton" name="PushButton_SetXray1">
+                <property name="text">
+                 <string>Set x-ray 1</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="0">
+               <widget class="QPushButton" name="PushButton_SetXray2">
+                <property name="text">
+                 <string>Set x-ray 2</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QPushButton" name="PushButton_ExternalCounter">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
                 <property name="text">
-                 <string>External start</string>
+                 <string>External counter</string>
                 </property>
                </widget>
               </item>
@@ -273,20 +304,10 @@
                 </item>
                </layout>
               </item>
-              <item row="3" column="0">
-               <widget class="QPushButton" name="PushButton_Acquisition">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
+              <item row="9" column="0">
+               <widget class="QPushButton" name="PushButton_ResetXray12">
                 <property name="text">
-                 <string>Acquisition</string>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="0">
-               <widget class="QPushButton" name="PushButton_FitTest">
-                <property name="text">
-                 <string>Fit test</string>
+                 <string>Reset x-ray 1 and 2</string>
                 </property>
                </widget>
               </item>
@@ -955,7 +976,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>590</width>
+     <width>575</width>
      <height>20</height>
     </rect>
    </property>
